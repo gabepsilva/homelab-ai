@@ -1,0 +1,16 @@
+---
+# Default variables for base_server role
+
+# System configuration
+server_timezone: "UTC"
+
+# Security settings
+# Removed enable_ufw variable
+ssh_port: 22
+
+# Additional packages to install (can be overridden in host/group vars)
+additional_packages: []
+
+# System update settings
+perform_system_update: true
+reboot_after_kernel_update: false 

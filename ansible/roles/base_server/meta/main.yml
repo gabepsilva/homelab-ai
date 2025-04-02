@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: System Admin
+  description: Base role for all servers with essential packages and security configurations
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+  
+  galaxy_tags:
+    - system
+    - security
+    - base
+
+dependencies: [] 

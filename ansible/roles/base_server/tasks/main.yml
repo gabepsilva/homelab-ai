@@ -1,0 +1,90 @@
+---
+# Main tasks file for base_server role
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+  when: ansible_os_family == "Debian"
+
+- name: Upgrade all packages
+  apt:
+    upgrade: dist
+  become: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install essential packages
+  package:
+    name: "{{ item }}"
+    state: present
+  become: yes
+  loop:
+    - vim
+    - htop
+    - tmux
+    - git
+    - curl
+    - wget
+    - unzip
+    - net-tools
+    - ca-certificates
+    - gnupg
+    - lsb-release
+    - python3
+    - python3-pip
+    - ntp
+    - sudo
+
+- name: Set timezone
+  timezone:
+    name: "{{ server_timezone }}"
+  become: yes
+
+- name: Check if NTP service exists (ntpsec)
+  stat:
+    path: /lib/systemd/system/ntpsec.service
+  register: ntpsec_exists
+  become: yes
+
+- name: Check if NTP service exists (ntp)
+  stat:
+    path: /lib/systemd/system/ntp.service
+  register: ntp_exists
+  become: yes
+
+- name: Ensure NTP service is running (ntpsec)
+  service:
+    name: ntpsec
+    state: started
+    enabled: yes
+  become: yes
+  when: ntpsec_exists.stat.exists
+
+- name: Ensure NTP service is running (ntp)
+  service:
+    name: ntp
+    state: started
+    enabled: yes
+  become: yes
+  when: ntp_exists.stat.exists
+
+- name: Configure SSH for security
+  template:
+    src: ssh_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+  notify: restart ssh
+
+- name: Create a strong password policy
+  copy:
+    src: pwquality.conf
+    dest: /etc/security/pwquality.conf
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+  when: ansible_os_family == "Debian" 
