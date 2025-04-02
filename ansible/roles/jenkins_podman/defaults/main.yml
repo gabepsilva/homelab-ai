@@ -1,0 +1,14 @@
+---
+# Default variables for jenkins_podman role
+
+# Jenkins configuration
+jenkins_image: docker.io/jenkins/jenkins:lts
+jenkins_container_name: jenkins
+jenkins_http_port: 8080
+jenkins_agent_port: 50000
+jenkins_home_dir: /home/ubuntu/jenkins/data
+jenkins_volume_name: jenkins_home
+
+# Podman configuration
+podman_socket_enabled: false
+systemd_user: ubuntu 

@@ -1,0 +1,17 @@
+[Unit]
+Description=Jenkins Server Container
+After=network-online.target
+
+[Container]
+Image={{ jenkins_image }}
+PublishPort={{ jenkins_http_port }}:8080
+PublishPort={{ jenkins_agent_port }}:50000
+Volume={{ jenkins_home_dir }}:/var/jenkins_home
+UserNS=keep-id
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target 

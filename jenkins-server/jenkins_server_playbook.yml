@@ -1,0 +1,42 @@
+---
+# Jenkins Server Playbook
+# This playbook applies the base_server role for system configuration and jenkins_podman role to deploy Jenkins
+
+- name: Deploy Jenkins Server
+  hosts: jenkins_servers
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - role: ../ansible/roles/base_server
+      tags: 
+        - base
+        - system
+        - security
+    
+    - role: ../ansible/roles/jenkins_podman
+      tags: 
+        - jenkins
+        - podman
+        - containers
+
+  pre_tasks:
+    - name: Check if server is reachable
+      wait_for_connection:
+        timeout: 10
+      ignore_errors: yes
+      register: connection_status
+    
+    - name: Fail if server is unreachable
+      fail:
+        msg: "Could not connect to {{ inventory_hostname }}. Please check connectivity."
+      when: connection_status.failed
+
+  post_tasks:
+    - name: Report completion
+      debug:
+        msg: "Jenkins server configuration completed successfully on {{ inventory_hostname }}"
+    
+    - name: Show Jenkins access information
+      debug:
+        msg: "Jenkins is available at http://{{ inventory_hostname }}:{{ jenkins_http_port }}" 

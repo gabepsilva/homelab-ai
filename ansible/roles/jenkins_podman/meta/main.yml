@@ -1,0 +1,26 @@
+---
+galaxy_info:
+  author: HomelabAI
+  description: Deploys Jenkins server using Podman with Quadlet integration
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+  - name: EL
+    versions:
+    - 8
+    - 9
+  - name: Debian
+    versions:
+    - buster
+    - bullseye
+  - name: Ubuntu
+    versions:
+    - focal
+    - jammy
+  galaxy_tags:
+    - jenkins
+    - podman
+    - container
+    - quadlet
+
+dependencies: [] 

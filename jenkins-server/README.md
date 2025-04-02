@@ -47,44 +47,48 @@ Access to the server is managed through SSH with authorized keys:
 
 ### Installation
 Jenkins is deployed using Ansible with the following options:
-- **Pure Quadlet**: Default and recommended deployment method
-- **Docker Compose with Quadlet**: For complex multi-container setups
-- **Podman Compose with systemd**: Compatible with Docker Compose workflows
+- **Rootless Podman with Quadlet**: Modern, secure deployment without root privileges
+- **Base Server Configuration**: Standard security hardening and system configuration
 
-For installation and configuration details, see the Ansible setup:
+For installation and configuration:
 ```bash
-cd ~/git_projects/homelab-ai/ansible
+cd ~/git_projects/homelab-ai/jenkins-server
+ansible-playbook -i ../ansible/inventory/hosts.yml jenkins_server_playbook.yml
 ```
 
 ### Accessing Jenkins
 - Jenkins is available at: http://jenkins-server.i.psilva.org:8080
-- Initial admin password: Check the ansible playbook output or run:
+- Initial admin password can be retrieved using:
   ```bash
-  sudo podman exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+  cat ~/jenkins/data/secrets/initialAdminPassword
+  ```
+  or
+  ```bash
+  podman logs systemd-jenkins | grep -A 1 "initialAdminPassword"
   ```
 
 ### Container Management
-Jenkins runs as a Podman container managed by systemd via quadlets:
+Jenkins runs as a rootless Podman container managed by the user's systemd instance via Quadlet files:
 
 - **View container status**:
   ```bash
-  sudo systemctl status jenkins.service
-  sudo podman ps
+  systemctl --user status jenkins.service
+  podman ps
   ```
 
 - **Restart Jenkins**:
   ```bash
-  sudo systemctl restart jenkins.service
+  systemctl --user restart jenkins.service
   ```
 
 - **Stop Jenkins**:
   ```bash
-  sudo systemctl stop jenkins.service
+  systemctl --user stop jenkins.service
   ```
 
 - **View logs**:
   ```bash
-  sudo journalctl -u jenkins.service
+  journalctl --user -u jenkins.service
   ```
 
 ### Jenkins Configuration
@@ -92,9 +96,14 @@ Jenkins runs as a Podman container managed by systemd via quadlets:
 - **Plugins**: Manage via Jenkins web UI at `Manage Jenkins > Plugins`
 - **Backup**: To backup Jenkins, archive the data directory:
   ```bash
-  sudo tar -czvf jenkins-backup.tar.gz /home/ubuntu/jenkins/data
+  tar -czvf jenkins-backup.tar.gz ~/jenkins/data
   ```
 
+### Rootless Container Security Benefits
+- No root privileges required for container operations
+- Reduced attack surface and potential for privilege escalation
+- Better resource isolation through user namespace mapping
+- Compatible with system security controls
 
 ## Important Security Guidelines
 - Keep your private SSH key secure and never share it
@@ -103,6 +112,8 @@ Jenkins runs as a Podman container managed by systemd via quadlets:
 - Change the default Jenkins admin password immediately after setup
 - Restrict access to Jenkins with proper authorization strategies
 - Regularly update Jenkins and its plugins
+- Review container logs regularly for suspicious activity
+- Maintain regular backups of Jenkins configuration data
 
 
 

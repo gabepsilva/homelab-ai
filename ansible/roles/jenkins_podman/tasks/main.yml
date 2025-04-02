@@ -1,0 +1,122 @@
+---
+# Tasks for jenkins_podman role
+
+- name: Install required packages for Podman
+  package:
+    name:
+      - podman
+      - python3-podman
+    state: present
+  become: yes
+  tags:
+    - jenkins
+    - podman
+
+- name: Create Jenkins data directory
+  file:
+    path: "{{ jenkins_home_dir }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ systemd_user }}"
+    group: "{{ systemd_user }}"
+  become: yes
+  tags: jenkins
+
+- name: Set permissions on Jenkins data directory
+  file:
+    path: "{{ jenkins_home_dir }}"
+    state: directory
+    owner: "{{ systemd_user }}"
+    group: "{{ systemd_user }}"
+    mode: '0755'
+    recurse: yes
+  become: yes
+  tags: jenkins
+
+- name: Set proper SELinux context on Jenkins data directory
+  shell: chcon -Rt container_file_t "{{ jenkins_home_dir }}"
+  become: yes
+  when: ansible_selinux.status == "enabled"
+  changed_when: false
+  ignore_errors: yes
+  tags: jenkins
+
+- name: Create systemd user directory
+  file:
+    path: "/home/{{ systemd_user }}/.config/systemd/user"
+    state: directory
+    mode: '0755'
+    owner: "{{ systemd_user }}"
+    group: "{{ systemd_user }}"
+  become: yes
+  become_user: "{{ systemd_user }}"
+  tags: jenkins
+
+- name: Create containers directory
+  file:
+    path: "/home/{{ systemd_user }}/.config/containers/systemd"
+    state: directory
+    mode: '0755'
+    owner: "{{ systemd_user }}"
+    group: "{{ systemd_user }}"
+  become: yes
+  become_user: "{{ systemd_user }}"
+  tags: jenkins
+
+- name: Deploy Jenkins container Quadlet file
+  template:
+    src: jenkins.container
+    dest: "/home/{{ systemd_user }}/.config/containers/systemd/jenkins.container"
+    mode: '0644'
+    owner: "{{ systemd_user }}"
+    group: "{{ systemd_user }}"
+  become: yes
+  become_user: "{{ systemd_user }}"
+  tags: jenkins
+  notify: Reload user systemd
+
+- name: Enable user lingering for systemd user
+  command: loginctl enable-linger {{ systemd_user }}
+  become: yes
+  changed_when: false
+  tags: jenkins
+
+- name: Check if user podman.socket exists
+  stat:
+    path: "/home/{{ systemd_user }}/.config/systemd/user/podman.socket"
+  register: user_podman_socket_file
+  become: yes
+  become_user: "{{ systemd_user }}"
+  tags:
+    - jenkins
+    - podman
+
+- name: Enable and start user podman.socket
+  systemd:
+    name: podman.socket
+    state: started
+    enabled: yes
+    scope: user
+  become: yes
+  become_user: "{{ systemd_user }}"
+  when: podman_socket_enabled and user_podman_socket_file.stat.exists
+  tags:
+    - jenkins
+    - podman
+
+- name: Reload user systemd daemon
+  shell: XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload
+  become: yes
+  become_user: "{{ systemd_user }}"
+  changed_when: false
+  tags: jenkins
+
+- name: Enable and start Jenkins container service for user
+  systemd:
+    name: jenkins.service
+    state: started
+    enabled: yes
+    scope: user
+  become: yes
+  become_user: "{{ systemd_user }}"
+  tags: jenkins 
