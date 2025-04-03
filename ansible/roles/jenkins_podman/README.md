@@ -6,7 +6,7 @@ This role deploys a Jenkins server using Podman with Quadlet integration for sys
 
 - Uses Podman to run Jenkins in a rootless container (no root privileges required)
 - Implements modern Quadlet configuration for systemd integration (replacing deprecated `podman generate systemd`)
-- Persists Jenkins data in a volume
+- Persists Jenkins data in a volume on the virtfs shared directory
 - Sets up proper system configuration and permissions
 
 ## Requirements
@@ -14,6 +14,7 @@ This role deploys a Jenkins server using Podman with Quadlet integration for sys
 - Podman installed on the target system
 - Systemd as the init system
 - A non-root user to run the container (defined by systemd_user)
+- The virtfs_mount role applied (automatically included as a dependency)
 
 ## Role Variables
 
@@ -25,7 +26,7 @@ jenkins_image: docker.io/jenkins/jenkins:lts
 jenkins_container_name: jenkins
 jenkins_http_port: 8080
 jenkins_agent_port: 50000
-jenkins_home_dir: /home/ubuntu/jenkins/data
+jenkins_home_dir: "/mnt/{{ inventory_hostname.split('.')[0] }}/jenkins/data"
 jenkins_volume_name: jenkins_home
 
 # Podman configuration

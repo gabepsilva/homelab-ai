@@ -1,0 +1,5 @@
+---
+# Default variables for virtfs_mount role
+
+# The mount tag specified in the VM configuration
+virtfs_mount_tag: "myshare" 

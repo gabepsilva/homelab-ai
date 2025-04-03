@@ -33,13 +33,6 @@
   become: yes
   tags: jenkins
 
-- name: Set proper SELinux context on Jenkins data directory
-  shell: chcon -Rt container_file_t "{{ jenkins_home_dir }}"
-  become: yes
-  when: ansible_selinux.status == "enabled"
-  changed_when: false
-  ignore_errors: yes
-  tags: jenkins
 
 - name: Create systemd user directory
   file:

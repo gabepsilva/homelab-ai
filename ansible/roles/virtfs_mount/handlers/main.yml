@@ -1,0 +1,6 @@
+---
+# Handlers for virtfs_mount role
+
+- name: remount filesystem
+  command: mount -a
+  become: yes 
