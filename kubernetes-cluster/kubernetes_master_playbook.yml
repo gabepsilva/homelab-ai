@@ -1,0 +1,33 @@
+---
+# Kubernetes Master Playbook
+# This playbook applies the base_server role for system configuration and kubernetes_master role to deploy Kubernetes control plane
+
+- name: Deploy Kubernetes Master
+  hosts: kubernetes_master
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - role: ../ansible/roles/base_server
+    - role: kubernetes_master
+
+  pre_tasks:
+    - name: Check if server is reachable
+      wait_for_connection:
+        timeout: 10
+      ignore_errors: yes
+      register: connection_status
+    
+    - name: Fail if server is unreachable
+      fail:
+        msg: "Could not connect to {{ inventory_hostname }}. Please check connectivity."
+      when: connection_status.failed
+
+  post_tasks:
+    - name: Report completion
+      debug:
+        msg: "Kubernetes master configuration completed successfully on {{ inventory_hostname }}"
+    
+    - name: Show cluster access information
+      debug:
+        msg: "Kubernetes API server is available at https://{{ inventory_hostname }}:6443" 

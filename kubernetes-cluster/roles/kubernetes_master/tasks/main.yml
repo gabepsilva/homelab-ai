@@ -1,0 +1,321 @@
+---
+# Main tasks file for kubernetes_master role
+
+- name: Add Kubernetes signing key
+  get_url:
+    url: https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key
+    dest: /tmp/kubernetes-apt-key.gpg
+  become: yes
+  when: ansible_os_family == "Debian"
+
+- name: Dearmor key
+  shell: cat /tmp/kubernetes-apt-key.gpg | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  become: yes
+  args:
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  when: ansible_os_family == "Debian"
+
+- name: Create kubernetes repository directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  become: yes
+  when: ansible_os_family == "Debian"
+
+- name: Add Kubernetes repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
+    state: present
+    filename: kubernetes
+  become: yes
+  when: ansible_os_family == "Debian"
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  become: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install containerd
+  apt:
+    name: containerd
+    state: present
+  become: yes
+  when: ansible_os_family == "Debian"
+
+- name: Create containerd directory
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Configure containerd
+  shell: containerd config default > /etc/containerd/config.toml
+  become: yes
+  args:
+    creates: /etc/containerd/config.toml
+
+- name: Edit containerd configuration to use systemd cgroup driver
+  lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: '^\s+SystemdCgroup = false'
+    line: '            SystemdCgroup = true'
+  become: yes
+  notify: restart containerd
+
+- name: Install Kubernetes packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  become: yes
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+    - lsof
+  when: ansible_os_family == "Debian"
+
+- name: Hold Kubernetes packages
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+    - containerd
+  become: yes
+  when: ansible_os_family == "Debian"
+
+- name: Disable swap
+  command: swapoff -a
+  become: yes
+
+- name: Remove swap from fstab
+  lineinfile:
+    path: /etc/fstab
+    regexp: '.*swap.*'
+    state: absent
+  become: yes
+
+- name: Enable kernel modules
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - overlay
+    - br_netfilter
+  become: yes
+
+- name: Add kernel modules to /etc/modules-load.d/
+  copy:
+    content: |
+      overlay
+      br_netfilter
+    dest: /etc/modules-load.d/kubernetes.conf
+    mode: '0644'
+  become: yes
+
+- name: Configure sysctl for Kubernetes
+  copy:
+    content: |
+      net.bridge.bridge-nf-call-iptables = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward = 1
+    dest: /etc/sysctl.d/99-kubernetes-cri.conf
+    mode: '0644'
+  become: yes
+
+- name: Apply sysctl changes
+  command: sysctl --system
+  become: yes
+
+- name: Check if Kubernetes reset is needed
+  stat:
+    path: /var/lib/kubelet
+  register: kube_conf
+  become: yes
+
+- name: Copy reset script
+  copy:
+    src: reset-kubernetes.sh
+    dest: /tmp/reset-kubernetes.sh
+    mode: '0755'
+  become: yes
+  when: reset_kubernetes | default(false) | bool
+
+- name: Reset Kubernetes if needed
+  command: /tmp/reset-kubernetes.sh
+  become: yes
+  when: reset_kubernetes | default(false) | bool
+
+- name: Create kubeadm config directory
+  file:
+    path: /etc/kubernetes/kubeadm
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Create kubeadm config file
+  template:
+    src: kubeadm-config.yaml.j2
+    dest: /etc/kubernetes/kubeadm/kubeadm-config.yaml
+    mode: '0644'
+  become: yes
+
+- name: Initialize Kubernetes cluster with config
+  command: kubeadm init --config=/etc/kubernetes/kubeadm/kubeadm-config.yaml --ignore-preflight-errors=all
+  args:
+    creates: /etc/kubernetes/admin.conf
+  become: yes
+  register: kubeadm_init
+
+- name: Create .kube directory for root
+  file:
+    path: /root/.kube
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Copy kube admin config for root
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    remote_src: yes
+    mode: '0644'
+  become: yes
+
+- name: Create .kube directory for user
+  file:
+    path: "{{ ansible_env.HOME }}/.kube"
+    state: directory
+    mode: '0755'
+  when: ansible_user_id != 'root'
+
+- name: Copy kube admin config for user
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ ansible_env.HOME }}/.kube/config"
+    remote_src: yes
+    mode: '0600'
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
+  become: yes
+  when: ansible_user_id != 'root'
+
+- name: Create bashrc update script
+  copy:
+    content: |
+      #!/bin/bash
+      grep -q "export KUBECONFIG=" ~/.bashrc || echo "export KUBECONFIG=~/.kube/config" >> ~/.bashrc
+    dest: /tmp/update_bashrc.sh
+    mode: '0755'
+  become: no
+  when: ansible_user_id != 'root'
+
+- name: Run bashrc update script
+  command: /tmp/update_bashrc.sh
+  become: no
+  when: ansible_user_id != 'root'
+
+- name: Wait for Kubernetes API to become available
+  wait_for:
+    host: "{{ apiserver_advertise_address }}"
+    port: 6443
+    timeout: 60
+    delay: 5
+  register: api_available
+  ignore_errors: yes
+
+- name: Check kubelet service status
+  shell: systemctl status kubelet
+  register: kubelet_status
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+  
+- name: Display kubelet status
+  debug:
+    var: kubelet_status.stdout_lines
+  when: kubelet_status is succeeded
+
+- name: Get kubelet logs
+  shell: journalctl -xeu kubelet --no-pager | tail -n 50
+  become: yes
+  register: kubelet_logs
+  changed_when: false
+  ignore_errors: yes
+
+- name: Display kubelet logs
+  debug:
+    var: kubelet_logs.stdout_lines
+  when: kubelet_logs is succeeded
+
+- name: Get actual API server address
+  shell: ip route get 1 | awk '{print $7;exit}'
+  register: actual_ip
+  changed_when: false
+  become: yes
+
+- name: Set API server address fact
+  set_fact:
+    actual_api_address: "{{ actual_ip.stdout.strip() }}"
+
+- name: Pause to allow Kubernetes API to initialize fully
+  pause:
+    seconds: 20
+  when: api_available is succeeded
+
+- name: Download network plugin manifest
+  get_url:
+    url: "{{ flannel_manifest_url if network_plugin == 'flannel' else calico_manifest_url }}"
+    dest: /tmp/network-plugin.yaml
+    mode: '0644'
+  become: yes
+
+- name: Install network plugin
+  become: yes
+  shell: |
+    export KUBECONFIG=/etc/kubernetes/admin.conf
+    kubectl apply -f /tmp/network-plugin.yaml
+  args:
+    executable: /bin/bash
+  register: network_result
+  changed_when: "'created' in network_result.stdout or 'configured' in network_result.stdout"
+  failed_when: "network_result.rc != 0 and 'already exists' not in network_result.stderr"
+  ignore_errors: yes
+
+- name: Generate join command for worker nodes
+  shell: |
+    export KUBECONFIG=/etc/kubernetes/admin.conf
+    kubeadm token create --print-join-command --ttl=24h0m0s
+  args:
+    executable: /bin/bash
+  become: yes
+  register: join_command
+  changed_when: false
+  ignore_errors: yes
+
+- name: Store join command in a file
+  copy:
+    content: "{{ join_command.stdout | default('') }}"
+    dest: "{{ ansible_env.HOME }}/kubernetes_join_command.txt"
+    mode: '0644'
+  when: join_command is succeeded and join_command.stdout is defined
+
+- name: Show cluster status
+  shell: |
+    export KUBECONFIG=/etc/kubernetes/admin.conf
+    kubectl get nodes
+  args:
+    executable: /bin/bash
+  register: nodes_status
+  become: yes
+  changed_when: false
+  ignore_errors: yes
+
+- name: Display cluster status
+  debug:
+    var: nodes_status.stdout_lines 

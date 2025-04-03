@@ -1,0 +1,14 @@
+---
+# Handlers for kubernetes_master role
+
+- name: restart containerd
+  service:
+    name: containerd
+    state: restarted
+  become: yes
+
+- name: restart kubelet
+  service:
+    name: kubelet
+    state: restarted
+  become: yes 

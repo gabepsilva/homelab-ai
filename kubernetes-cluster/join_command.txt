@@ -1,0 +1,1 @@
+kubeadm join 10.10.0.130:6443 --token wstlwc.hjtcr1c4syqwsars --discovery-token-ca-cert-hash sha256:07b98f610b3228a52c28d3bd43ebf25c5187662b3f43a350c0d6549b67f54098 
