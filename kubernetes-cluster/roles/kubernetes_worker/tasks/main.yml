@@ -1,5 +1,5 @@
 ---
-# Main tasks file for kubernetes_master role
+# Main tasks file for kubernetes_worker role
 
 - name: Add Kubernetes signing key
   get_url:
@@ -74,7 +74,6 @@
     - kubelet
     - kubeadm
     - kubectl
-    - lsof
   when: ansible_os_family == "Debian"
 
 - name: Hold Kubernetes packages
@@ -151,129 +150,18 @@
   become: yes
   when: reset_kubernetes | default(false) | bool
 
-- name: Create kubeadm config directory
-  file:
-    path: /etc/kubernetes/kubeadm
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Create kubeadm config file
-  template:
-    src: kubeadm-config.yaml.j2
-    dest: /etc/kubernetes/kubeadm/kubeadm-config.yaml
+- name: Copy join command
+  copy:
+    src: "{{ join_command_file }}"
+    dest: /tmp/kubernetes_join_command.txt
     mode: '0644'
   become: yes
 
-- name: Initialize Kubernetes cluster with config
-  command: kubeadm init --config=/etc/kubernetes/kubeadm/kubeadm-config.yaml --ignore-preflight-errors=all
-  args:
-    creates: /etc/kubernetes/admin.conf
-  become: yes
-  register: kubeadm_init
-
-- name: Create .kube directory for root
-  file:
-    path: /root/.kube
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Copy kube admin config for root
-  copy:
-    src: /etc/kubernetes/admin.conf
-    dest: /root/.kube/config
-    remote_src: yes
-    mode: '0644'
-  become: yes
-
-- name: Create .kube directory for user
-  file:
-    path: "{{ ansible_env.HOME }}/.kube"
-    state: directory
-    mode: '0755'
-  when: ansible_user_id != 'root'
-
-- name: Copy kube admin config for user
-  copy:
-    src: /etc/kubernetes/admin.conf
-    dest: "{{ ansible_env.HOME }}/.kube/config"
-    remote_src: yes
-    mode: '0600'
-    owner: "{{ ansible_user_id }}"
-    group: "{{ ansible_user_gid }}"
-  become: yes
-  when: ansible_user_id != 'root'
-
-- name: Create bashrc update script
-  copy:
-    content: |
-      #!/bin/bash
-      grep -q "export KUBECONFIG=" ~/.bashrc || echo "export KUBECONFIG=~/.kube/config" >> ~/.bashrc
-    dest: /tmp/update_bashrc.sh
-    mode: '0755'
-  become: no
-  when: ansible_user_id != 'root'
-
-- name: Run bashrc update script
-  command: /tmp/update_bashrc.sh
-  become: no
-  when: ansible_user_id != 'root'
-
-- name: Wait for Kubernetes API to be ready
-  wait_for:
-    host: "{{ apiserver_advertise_address }}"
-    port: 6443
-    timeout: 60
-    delay: 5
-  ignore_errors: yes
-
-- name: Pause to allow Kubernetes API to initialize fully
-  pause:
-    seconds: 10
-
-- name: Download network plugin manifest
-  get_url:
-    url: "{{ flannel_manifest_url if network_plugin == 'flannel' else calico_manifest_url }}"
-    dest: /tmp/network-plugin.yaml
-    mode: '0644'
-  become: yes
-
-- name: Install network plugin
-  become: yes
-  shell: |
-    export KUBECONFIG=/etc/kubernetes/admin.conf
-    kubectl apply -f /tmp/network-plugin.yaml
-  args:
-    executable: /bin/bash
-  register: network_result
-  ignore_errors: yes
-
-- name: Generate join command for worker nodes
-  shell: |
-    export KUBECONFIG=/etc/kubernetes/admin.conf
-    kubeadm token create --print-join-command --ttl=24h0m0s
+- name: Apply join command
+  shell: sh -c "$(cat /tmp/kubernetes_join_command.txt)"
   args:
     executable: /bin/bash
   become: yes
-  register: join_command
-  changed_when: false
-  ignore_errors: yes
-
-- name: Store join command in a file
-  copy:
-    content: "{{ join_command.stdout | default('') }}"
-    dest: "{{ ansible_env.HOME }}/kubernetes_join_command.txt"
-    mode: '0644'
-  when: join_command is succeeded and join_command.stdout is defined
-
-- name: Show cluster status
-  shell: |
-    export KUBECONFIG=/etc/kubernetes/admin.conf
-    kubectl get nodes
-  args:
-    executable: /bin/bash
-  register: nodes_status
-  become: yes
-  changed_when: false
-  ignore_errors: yes 
+  register: join_result
+  failed_when: join_result.rc != 0 and 'is already a member of a cluster' not in join_result.stderr
+  changed_when: join_result.rc == 0 

@@ -13,17 +13,13 @@ fi
 # Remove Kubernetes directories
 rm -rf /etc/kubernetes/
 rm -rf /var/lib/kubelet/
-rm -rf /var/lib/etcd/
-rm -rf $HOME/.kube/
+rm -rf /etc/cni/net.d/
 
 # Clean up network configurations
 iptables -F
 iptables -t nat -F
 iptables -t mangle -F
 iptables -X
-
-# Remove CNI configurations
-rm -rf /etc/cni/net.d/
 
 # Restart containerd
 systemctl restart containerd

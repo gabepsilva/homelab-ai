@@ -1,0 +1,22 @@
+---
+# Main Kubernetes deployment playbook
+- name: Deploy Kubernetes Master
+  hosts: kubernetes_master_nodes
+  gather_facts: yes
+  vars:
+    apiserver_advertise_address: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}"
+    pod_network_cidr: "10.244.0.0/16"
+    service_cidr: "10.96.0.0/12"
+    network_plugin: "flannel"
+    flannel_manifest_url: "https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml"
+    calico_manifest_url: "https://docs.projectcalico.org/manifests/calico.yaml"
+  roles:
+    - kubernetes_master
+
+- name: Deploy Kubernetes Workers
+  hosts: kubernetes_worker_nodes
+  gather_facts: yes
+  vars:
+    join_command_file: "{{ lookup('env', 'HOME') }}/kubernetes_join_command.txt"
+  roles:
+    - kubernetes_worker 
