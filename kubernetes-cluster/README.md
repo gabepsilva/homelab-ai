@@ -62,6 +62,13 @@ ssh user@master_node "cat kubernetes_join_command.txt"
 ssh user@worker_node "sudo <join_command>"
 ```
 
+3. Manually label the node as a worker (if using direct join method):
+```bash
+kubectl label node <node-name> node-role.kubernetes.io/worker=worker
+```
+
+> **Note**: When using the Ansible playbook method, worker nodes are automatically labeled with the `worker` role for better visualization in `kubectl get nodes` output.
+
 ## Operating the Kubernetes Cluster
 
 ### Master Node Operations

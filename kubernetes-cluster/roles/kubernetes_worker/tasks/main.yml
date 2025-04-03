@@ -74,6 +74,7 @@
     - kubelet
     - kubeadm
     - kubectl
+    - lsof
   when: ansible_os_family == "Debian"
 
 - name: Hold Kubernetes packages
@@ -150,18 +151,43 @@
   become: yes
   when: reset_kubernetes | default(false) | bool
 
-- name: Copy join command
-  copy:
+- name: Read join command
+  slurp:
     src: "{{ join_command_file }}"
-    dest: /tmp/kubernetes_join_command.txt
-    mode: '0644'
+  register: join_command_b64
+  delegate_to: localhost
+  when: join_command is not defined
+  
+- name: Set join command
+  set_fact:
+    join_command: "{{ join_command_b64['content'] | b64decode | trim }}"
+  when: join_command is not defined and join_command_b64 is defined
+
+- name: Join Kubernetes cluster
+  command: "{{ join_command }}"
+  args:
+    creates: /etc/kubernetes/kubelet.conf
   become: yes
 
-- name: Apply join command
-  shell: sh -c "$(cat /tmp/kubernetes_join_command.txt)"
-  args:
-    executable: /bin/bash
+- name: Restart kubelet
+  service:
+    name: kubelet
+    state: restarted
+    enabled: yes
   become: yes
-  register: join_result
-  failed_when: join_result.rc != 0 and 'is already a member of a cluster' not in join_result.stderr
-  changed_when: join_result.rc == 0 
+  
+- name: Wait for node to be visible in the cluster
+  pause:
+    seconds: 10
+  delegate_to: localhost
+
+- name: Get node name
+  shell: hostname
+  register: node_hostname
+  
+- name: Label node as worker
+  shell: kubectl label node {{ node_hostname.stdout }} node-role.kubernetes.io/worker=worker
+  delegate_to: "{{ groups['kubernetes_master_nodes'][0] }}"
+  become: yes
+  become_user: ubuntu
+  ignore_errors: yes 
