@@ -240,13 +240,13 @@
   become: yes
 
 - name: Install network plugin
-  become: yes
-  shell: |
+  command: |
     export KUBECONFIG=/etc/kubernetes/admin.conf
     kubectl apply -f /tmp/network-plugin.yaml
-  args:
-    executable: /bin/bash
   register: network_result
+  until: network_result.rc == 0
+  retries: 5
+  delay: 20
   ignore_errors: yes
 
 - name: Generate join command for worker nodes

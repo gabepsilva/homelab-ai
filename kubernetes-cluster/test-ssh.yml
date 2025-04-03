@@ -1,0 +1,64 @@
+---
+# Playbook to test SSH connectivity to all nodes
+- name: Test SSH connectivity
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Check server information
+      debug:
+        msg: "Connected to {{ inventory_hostname }} ({{ ansible_default_ipv4.address }}) running {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    - name: Check kernel version
+      shell: uname -r
+      register: kernel_version
+      changed_when: false
+
+    - name: Display kernel version
+      debug:
+        msg: "Kernel version: {{ kernel_version.stdout }}"
+
+    - name: Check disk space
+      shell: df -h / | tail -n 1 | awk '{print $5}'
+      register: disk_usage
+      changed_when: false
+
+    - name: Display disk usage
+      debug:
+        msg: "Disk usage: {{ disk_usage.stdout }}"
+
+    - name: Check memory
+      shell: "free -h | grep Mem | awk '{print \"Total: \"$2\", Used: \"$3\", Free: \"$4}'"
+      register: memory_info
+      changed_when: false
+
+    - name: Display memory info
+      debug:
+        msg: "Memory: {{ memory_info.stdout }}"
+
+    - name: Check if containerd is installed
+      command: which containerd
+      register: containerd_check
+      changed_when: false
+      failed_when: false
+
+    - name: Set containerd status
+      set_fact:
+        containerd_status: "{% if containerd_check.rc == 0 %}installed{% else %}not installed{% endif %}"
+
+    - name: Display containerd status
+      debug:
+        msg: "Containerd is {{ containerd_status }}"
+
+    - name: Check if kubernetes tools are installed
+      command: which kubelet
+      register: kubelet_check
+      changed_when: false
+      failed_when: false
+
+    - name: Set kubernetes status
+      set_fact:
+        kubernetes_status: "{% if kubelet_check.rc == 0 %}installed{% else %}not installed{% endif %}"
+
+    - name: Display kubernetes status
+      debug:
+        msg: "Kubernetes tools are {{ kubernetes_status }}" 

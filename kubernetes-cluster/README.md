@@ -29,7 +29,7 @@ Before running the playbooks, update the inventory files in the `hosts.ini` file
 
 Edit the inventory file to set:
 - `apiserver_advertise_address`: The IP address to advertise for the Kubernetes API server
-- `pod_network_cidr`: The CIDR range for pod networking (default: 10.244.0.0/16 for Flannel)
+- `pod_network_cidr`: The CIDR range for pod networking (default: 192.168.0.0/16 for Calico)
 - `kubernetes_version`: The Kubernetes version to install (default: 1.28.15)
 
 ## Deployment
@@ -265,8 +265,105 @@ kubectl get nodes
 ## Components
 
 - **Container Runtime**: containerd
-- **Network Plugin**: Flannel
+- **Network Plugin**: Calico
 - **DNS**: CoreDNS (included with Kubernetes)
+
+## Calico Network Configuration
+
+Calico is a networking and security solution that enables Kubernetes networking through a pure IP networking fabric and provides a rich set of security features.
+
+### Features
+
+- **Pod Networking**: Calico assigns IP addresses to pods and handles the routing between nodes
+- **Network Policy**: Calico provides fine-grained network policy enforcement based on the Kubernetes Network Policy API
+- **IPAM**: Calico's IP Address Management system efficiently allocates and manages IP addresses across the cluster
+- **BGP Networking**: For advanced setups, Calico can use BGP for routing without an overlay (when using native routing)
+
+### Customizing Calico
+
+To customize the Calico installation:
+
+1. Download the Calico manifest from the deployment node
+```bash
+curl -O https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/calico.yaml
+```
+
+2. Edit the manifest to customize configurations such as:
+   - Pod CIDR range
+   - MTU settings
+   - IP Auto Detection method
+   - Feature enablement
+
+3. Apply the modified manifest
+```bash
+kubectl apply -f calico.yaml
+```
+
+### Verifying Calico Installation
+
+To verify Calico is working correctly:
+
+```bash
+# Check Calico pods status
+kubectl get pods -n calico-system
+
+# Verify BGP status (if using BGP)
+kubectl exec -n calico-system calico-node-xxxxx -- calico-node -bird-ready
+kubectl exec -n calico-system calico-node-xxxxx -- calico-node -felix-ready
+```
+
+## Testing Calico Network Connectivity
+
+After deploying your Kubernetes cluster with Calico CNI, you can verify that the network is functioning correctly with these steps:
+
+### 1. Check Pod Status
+```bash
+kubectl get pods -n kube-system
+```
+
+All Calico pods (calico-node and calico-kube-controllers) should be in the `Running` state.
+
+### 2. Test Pod-to-Pod Communication
+Deploy a test application:
+```bash
+kubectl create deployment nginx --image=nginx
+kubectl scale deployment nginx --replicas=4
+```
+
+Check pod distribution and IP addresses:
+```bash
+kubectl get pods -o wide
+```
+
+Test connectivity between pods:
+```bash
+# Get a pod name
+export POD_NAME=$(kubectl get pods -l app=nginx -o jsonpath='{.items[0].metadata.name}')
+
+# Install curl in the pod
+kubectl exec -it $POD_NAME -- /bin/bash -c 'apt-get update && apt-get install -y curl'
+
+# Test connectivity to another pod (replace with actual pod IP)
+kubectl exec -it $POD_NAME -- curl -s <OTHER_POD_IP>
+```
+
+### 3. Test Service Access
+Create a test service:
+```bash
+kubectl expose deployment nginx --port=80 --type=NodePort
+```
+
+Get the assigned NodePort:
+```bash
+kubectl get svc nginx
+```
+
+Access the service from outside the cluster:
+```bash
+curl http://<NODE_IP>:<NODE_PORT>
+```
+
+If all tests pass, your Calico network implementation is working correctly.
 
 ## Backup and Restore
 

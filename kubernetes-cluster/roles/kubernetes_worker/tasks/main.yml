@@ -190,4 +190,19 @@
   delegate_to: "{{ groups['kubernetes_master_nodes'][0] }}"
   become: yes
   become_user: ubuntu
-  ignore_errors: yes 
+  ignore_errors: yes
+
+- name: Join the cluster
+  command: "{{ join_command }}"
+  when: not reset_kubernetes | default(false) | bool
+  register: join_result
+  retries: 3
+  delay: 10
+  until: join_result.rc == 0
+  failed_when: join_result.rc != 0 and 'already exists' not in join_result.stderr
+
+- name: Add node labels
+  shell: |
+    KUBECONFIG=/etc/kubernetes/kubelet.conf kubectl label node $(hostname) node-role.kubernetes.io/worker=worker
+  ignore_errors: yes
+  when: label_worker_nodes | default(true) | bool 
