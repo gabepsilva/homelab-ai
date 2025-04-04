@@ -1,1 +1,0 @@
-kubeadm join 10.10.0.130:6443 --token zidqpj.1amozj76lsormi63 --discovery-token-ca-cert-hash sha256:7aacd9e6765c96d179e049a9a48e168d2c23aff38b04bb825783028b25b13438 

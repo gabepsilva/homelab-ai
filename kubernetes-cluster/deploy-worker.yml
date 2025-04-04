@@ -3,7 +3,5 @@
 - name: Deploy Kubernetes Worker Nodes
   hosts: kubernetes_worker_nodes
   gather_facts: yes
-  vars:
-    join_command_file: "kubernetes_join_command.txt"
   roles:
     - kubernetes_worker 
