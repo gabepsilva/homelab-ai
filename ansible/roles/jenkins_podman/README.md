@@ -22,7 +22,7 @@ Variables are defined in `defaults/main.yml`:
 
 ```yaml
 # Jenkins configuration
-jenkins_image: docker.io/jenkins/jenkins:lts
+jenkins_image: docker.io/jenkins/jenkins:jdk21
 jenkins_container_name: jenkins
 jenkins_http_port: 8080
 jenkins_agent_port: 50000

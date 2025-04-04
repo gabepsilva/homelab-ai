@@ -1,0 +1,75 @@
+---
+# Jenkins Server Playbook
+# This playbook applies the base_server role for system configuration and jenkins_podman role to deploy Jenkins
+
+- name: Deploy Jenkins Server
+  hosts: jenkins-worker1
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - role: ../ansible/roles/base_server
+    - role: ../ansible/roles/virtfs_mount
+  
+  tasks:
+    - name: Install OpenJDK 21 JRE headless
+      apt:
+        name: openjdk-21-jre-headless
+        state: present
+        update_cache: yes
+    
+    - name: Download Jenkins agent.jar
+      shell: curl -sO http://jenkins-server.i.psilva.org:8080/jnlpJars/agent.jar
+      args:
+        chdir: /home/ubuntu
+        creates: /home/ubuntu/agent.jar
+
+    - name: Create secret file for Jenkins agent
+      file:
+        path: /home/ubuntu/secret-file
+        state: touch
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600'
+
+    - name: Ensure work directory exists
+      file:
+        path: /mnt/jenkins-worker1
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+      
+    - name: Create Jenkins agent systemd service
+      template:
+        src: ../ansible/roles/jenkins_podman/templates/jenkins-agent.service.j2
+        dest: /etc/systemd/system/jenkins-agent.service
+        owner: root
+        group: root
+        mode: '0644'
+      vars:
+        agent_jar_path: /home/ubuntu/agent.jar
+        jenkins_url: http://jenkins-server.i.psilva.org:8080/
+        agent_name: jenkins-worker1
+        secret_file: /home/ubuntu/secret-file
+        work_dir: /mnt/jenkins-worker1
+        
+    - name: Enable and start Jenkins agent service
+      systemd:
+        name: jenkins-agent
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    - name: Reminder to edit secret file
+      debug:
+        msg: |
+          IMPORTANT: After playbook completes, please:
+          1. Edit /home/ubuntu/secret-file with the Jenkins agent secret from the Jenkins server
+          2. Restart the Jenkins agent service with: sudo systemctl restart jenkins-agent
+
+  post_tasks:
+    - name: Report completion
+      debug:
+        msg: "Jenkins server configuration completed successfully on {{ inventory_hostname }}"
+    
