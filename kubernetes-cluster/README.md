@@ -173,3 +173,36 @@ Always verify cluster health after restarting components:
 kubectl get nodes
 kubectl get pods --all-namespaces
 ```
+
+## Running Tests
+
+After deploying your cluster, you can verify its functionality using the included test playbooks:
+
+### Testing the Kubernetes Cluster and Calico
+
+Run the general cluster test playbook to verify basic Kubernetes functionality and Calico network policies:
+
+```bash
+ansible-playbook -i hosts.ini test-cluster.yml
+```
+
+This test validates:
+- Kubernetes core components
+- Calico network policies
+- Inter-pod communication
+- Worker node Calico connectivity
+
+### Testing MetalLB Load Balancer
+
+After installing MetalLB, run the MetalLB test playbook to verify LoadBalancer functionality:
+
+```bash
+ansible-playbook -i hosts.ini test-metallb.yml
+```
+
+This test validates:
+- MetalLB deployment status
+- LoadBalancer service IP assignment
+- Network connectivity to load-balanced services
+- Proper IP allocation from the configured pool
+- Multiple service allocation
