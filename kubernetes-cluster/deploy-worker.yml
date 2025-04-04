@@ -6,4 +6,4 @@
   vars:
     kubernetes_version: "1.32.2"
   roles:
-    - kubernetes_worker 
+    - ../ansible/roles/kubernetes_worker 

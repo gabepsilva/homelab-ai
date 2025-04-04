@@ -16,9 +16,14 @@ kubernetes-cluster/
 ├── deploy-master.yml - Playbook to deploy master nodes
 ├── deploy-worker.yml - Playbook to deploy worker nodes
 ├── hosts.ini - Inventory file with node definitions
-├── roles/
-    ├── kubernetes_master/ - Role for setting up master nodes
-    ├── kubernetes_worker/ - Role for setting up worker nodes
+```
+
+The Kubernetes roles are located in the ansible/roles directory:
+
+```
+ansible/roles/
+├── kubernetes_master/ - Role for setting up master nodes
+├── kubernetes_worker/ - Role for setting up worker nodes
 ```
 
 ## Installation Instructions
@@ -185,24 +190,3 @@ Run the general cluster test playbook to verify basic Kubernetes functionality a
 ```bash
 ansible-playbook -i hosts.ini test-cluster.yml
 ```
-
-This test validates:
-- Kubernetes core components
-- Calico network policies
-- Inter-pod communication
-- Worker node Calico connectivity
-
-### Testing MetalLB Load Balancer
-
-After installing MetalLB, run the MetalLB test playbook to verify LoadBalancer functionality:
-
-```bash
-ansible-playbook -i hosts.ini test-metallb.yml
-```
-
-This test validates:
-- MetalLB deployment status
-- LoadBalancer service IP assignment
-- Network connectivity to load-balanced services
-- Proper IP allocation from the configured pool
-- Multiple service allocation
