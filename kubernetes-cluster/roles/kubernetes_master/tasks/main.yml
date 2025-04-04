@@ -3,7 +3,7 @@
 
 - name: Add Kubernetes signing key
   get_url:
-    url: https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key
+    url: https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key
     dest: /tmp/kubernetes-apt-key.gpg
   become: yes
   when: ansible_os_family == "Debian"
@@ -25,7 +25,7 @@
 
 - name: Add Kubernetes repository
   apt_repository:
-    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /"
     state: present
     filename: kubernetes
   become: yes
@@ -227,7 +227,7 @@
     return_content: yes
     validate_certs: no 
   register: api_version_response
-  retries: 5
+  retries: 12
   delay: 10
   until: api_version_response.status == 200
 

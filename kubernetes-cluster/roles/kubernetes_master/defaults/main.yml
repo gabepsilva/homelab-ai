@@ -2,7 +2,7 @@
 # Default variables for kubernetes_master role
 
 # Kubernetes version (specific version for kubeadm)
-kubernetes_version: "1.28.0"
+kubernetes_version: "1.31.0"
 
 # Pod network CIDR
 pod_network_cidr: "10.244.0.0/16"
@@ -14,7 +14,7 @@ apiserver_advertise_address: "{{ ansible_default_ipv4.address }}"
 network_plugin: "calico"
 
 # Calico network manifest URL (using specific stable version)
-calico_manifest_url: "https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml"
+calico_manifest_url: "https://raw.githubusercontent.com/projectcalico/calico/v3.29.0/manifests/calico.yaml"
 
 # Control plane endpoint (for HA setups)
 control_plane_endpoint: ""
