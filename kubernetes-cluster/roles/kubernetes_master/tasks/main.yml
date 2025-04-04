@@ -237,7 +237,7 @@
 
 - name: Download network plugin manifest
   get_url:
-    url: "{{ flannel_manifest_url if network_plugin == 'flannel' else calico_manifest_url }}"
+    url: "{{ calico_manifest_url }}"
     dest: /tmp/network-plugin.yaml
     mode: '0644'
   #become: yes
@@ -257,7 +257,7 @@
 - name: Verify network plugin pods are running
   shell: |
     export KUBECONFIG=/etc/kubernetes/admin.conf
-    kubectl wait --namespace=kube-system --for=condition=ready pods --selector {{ 'k8s-app=calico-node' if network_plugin == 'calico' else 'app=flannel' }}
+    kubectl wait --namespace=kube-system --for=condition=ready pods --selector k8s-app=calico-node
   args:
     executable: /bin/bash
   register: network_pods_check

@@ -10,11 +10,8 @@ pod_network_cidr: "10.244.0.0/16"
 # API server advertise address (will be overridden in host vars)
 apiserver_advertise_address: "{{ ansible_default_ipv4.address }}"
 
-# Network plugin (flannel or calico)
-network_plugin: "flannel"
-
-# Flannel network manifest URL
-flannel_manifest_url: "https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml"
+# Network plugin (calico only)
+network_plugin: "calico"
 
 # Calico network manifest URL (using specific stable version)
 calico_manifest_url: "https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml"
