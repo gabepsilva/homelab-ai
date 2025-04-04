@@ -1,0 +1,145 @@
+---
+# Kubernetes cluster and Calico test playbook
+- name: Test Kubernetes Cluster and Calico
+  hosts: kubernetes_master_nodes
+  gather_facts: yes
+  tasks:
+    - name: Include test tasks
+      include_tasks: roles/kubernetes_master/tasks/test-cluster.yml
+
+    - name: Test Calico network policy
+      block:
+        - name: Create namespace for network policy testing
+          shell: |
+            export KUBECONFIG=/etc/kubernetes/admin.conf
+            kubectl create namespace policy-test
+          register: np_namespace
+          changed_when: false
+          failed_when: np_namespace.rc != 0 and "AlreadyExists" not in np_namespace.stderr
+          become: yes
+
+        - name: Create test pods
+          shell: |
+            export KUBECONFIG=/etc/kubernetes/admin.conf
+            cat <<EOF | kubectl apply -f -
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: pod-a
+              namespace: policy-test
+              labels:
+                app: pod-a
+            spec:
+              containers:
+              - name: nginx
+                image: nginx
+            ---
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: pod-b
+              namespace: policy-test
+              labels:
+                app: pod-b
+            spec:
+              containers:
+              - name: busybox
+                image: busybox
+                command:
+                  - sleep
+                  - "3600"
+            EOF
+          register: create_np_pods
+          changed_when: false
+          become: yes
+
+        - name: Wait for test pods to be running
+          shell: |
+            export KUBECONFIG=/etc/kubernetes/admin.conf
+            kubectl wait --namespace=policy-test --for=condition=ready pod/pod-a --timeout=60s
+            kubectl wait --namespace=policy-test --for=condition=ready pod/pod-b --timeout=60s
+          register: np_pods_ready
+          changed_when: false
+          ignore_errors: yes
+          become: yes
+
+        - name: Test connectivity before network policy
+          shell: |
+            export KUBECONFIG=/etc/kubernetes/admin.conf
+            POD_A_IP=$(kubectl get pod pod-a -n policy-test -o jsonpath='{.status.podIP}')
+            kubectl exec -n policy-test pod-b -- wget -T 5 -O- http://$POD_A_IP
+          register: connectivity_before
+          changed_when: false
+          ignore_errors: yes
+          become: yes
+          when: np_pods_ready is succeeded
+
+        - name: Apply restrictive network policy
+          shell: |
+            export KUBECONFIG=/etc/kubernetes/admin.conf
+            cat <<EOF | kubectl apply -f -
+            apiVersion: networking.k8s.io/v1
+            kind: NetworkPolicy
+            metadata:
+              name: deny-all
+              namespace: policy-test
+            spec:
+              podSelector: {}
+              policyTypes:
+              - Ingress
+            EOF
+          register: apply_policy
+          changed_when: false
+          become: yes
+          when: np_pods_ready is succeeded
+
+        - name: Test connectivity after network policy (should fail)
+          shell: |
+            export KUBECONFIG=/etc/kubernetes/admin.conf
+            POD_A_IP=$(kubectl get pod pod-a -n policy-test -o jsonpath='{.status.podIP}')
+            kubectl exec -n policy-test pod-b -- wget -T 5 -O- http://$POD_A_IP
+          register: connectivity_after
+          changed_when: false
+          ignore_errors: yes
+          become: yes
+          when: np_pods_ready is succeeded and apply_policy is succeeded
+
+        - name: Display network policy test results
+          debug:
+            msg: |
+              Before Network Policy: {{ 'Connection successful' if connectivity_before.rc == 0 else 'Connection failed' }}
+              After Network Policy: {{ 'Connection failed as expected (Calico policy working)' if connectivity_after.rc != 0 else 'Connection succeeded unexpectedly (Calico policy NOT working)' }}
+          when: np_pods_ready is succeeded and apply_policy is succeeded
+
+        - name: Cleanup network policy test resources
+          shell: |
+            export KUBECONFIG=/etc/kubernetes/admin.conf
+            kubectl delete namespace policy-test
+          register: np_cleanup
+          changed_when: false
+          ignore_errors: yes
+          become: yes
+
+    - name: Validate worker node Calico connectivity
+      block:
+        - name: Get first worker node name
+          shell: |
+            export KUBECONFIG=/etc/kubernetes/admin.conf
+            kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}'
+          register: worker_node
+          changed_when: false
+          become: yes
+
+        - name: Check Calico pods on worker node
+          shell: |
+            export KUBECONFIG=/etc/kubernetes/admin.conf
+            kubectl get pods -n kube-system -l k8s-app=calico-node -o wide | grep {{ worker_node.stdout }}
+          register: worker_calico
+          changed_when: false
+          become: yes
+          when: worker_node.stdout is defined and worker_node.stdout != ""
+
+        - name: Display worker node Calico status
+          debug:
+            var: worker_calico.stdout_lines
+          when: worker_calico is defined 

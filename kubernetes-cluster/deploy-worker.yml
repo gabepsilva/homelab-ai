@@ -1,7 +1,9 @@
 ---
-# Playbook to deploy only worker nodes
+# Kubernetes worker deployment playbook
 - name: Deploy Kubernetes Worker Nodes
   hosts: kubernetes_worker_nodes
   gather_facts: yes
+  vars:
+    kubernetes_version: "1.32.2"
   roles:
     - kubernetes_worker 
