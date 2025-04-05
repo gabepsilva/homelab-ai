@@ -1,0 +1,42 @@
+pipeline {
+    agent any
+    stages {
+        stage("Fetch Hostnames") {
+            steps {
+                script {
+                    sshagent (credentials: ['jenkins-key']) {
+                        // Fetch all hostnames using sudo qm list and extract just the hostname column
+                        def hostnames = sh(script: "ssh -o StrictHostKeyChecking=no -l jenkins chrysler 'sudo qm list | grep -v NAME | awk \"{print \\\$2}\"'", returnStdout: true).trim().tokenize('\n')
+                        echo "Hostnames: ${hostnames}"
+
+                        // Create a dropdown for hostname selection
+                        def selectedHostname = input(message: 'Select a hostname:', parameters: [choice(name: 'Hostname', choices: hostnames.join('\n'), description: 'Choose a hostname')])
+
+
+                    }
+                }
+            }
+        }
+        stage("Fetch Playbooks") {
+            steps {
+                script {
+                    sshagent (credentials: ['jenkins-key']) {
+                        //Clone the ansible folder from the homelab-ai repo
+                        sh "git clone https://github.com/gabepsilva/homelab-ai.git"
+                        sh "cd homelab-ai/ansible/playbooks"
+
+                        // Build a list of all files ending in _playbook.yml
+                        def playbooks = sh(script: "ls *_playbook.yml", returnStdout: true).trim().tokenize('\n')
+                        echo "Playbooks: ${playbooks}"
+
+                        // Create a dropdown for playbook selection
+                        def selectedPlaybook = input(message: 'Select a playbook to apply:', parameters: [choice(name: 'Playbook', choices: playbooks.join('\n'), description: 'Choose a playbook')])
+
+                        // Apply the selected playbook to the selected hostname
+                        sh "ansible-playbook ${selectedPlaybook} -i ${selectedHostname}"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,16 @@
+---
+# Base Server Playbook
+# This playbook applies the base_server role to configure essential packages and security settings
+
+- name: Configure base servers
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - role: base_server
+
+  post_tasks:
+    - name: Report completion
+      debug:
+        msg: "Base server configuration completed successfully on {{ inventory_hostname }}" 
