@@ -18,13 +18,7 @@ pipeline {
     
     stages {
         stage('Prepare') {
-            steps {
-                // Clean the workspace to ensure a fresh start
-                cleanWs()
-                // We're already in the workspace, no need for checkout
-                echo "Using workspace: ${WORKSPACE}"
-                sh 'git clone https://github.com/gabepsilva/homelab-ai .'
-                
+            steps {                
                 // Check if .mega-linter.yml exists
                 script {
                     if (!fileExists('.mega-linter.yml')) {
