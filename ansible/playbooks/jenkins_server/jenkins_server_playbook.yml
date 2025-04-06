@@ -3,7 +3,7 @@
 # This playbook applies the base_server role for system configuration and jenkins_podman role to deploy Jenkins
 
 - name: Deploy Jenkins Server
-  hosts: jenkins-server
+  hosts: jenkins_server
   become: yes
   gather_facts: yes
   
