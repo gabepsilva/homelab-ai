@@ -2,21 +2,21 @@
 # Tasks for mounting virtfs shared directory
 
 - name: Ensure the mount point directory exists
-  file:
+  ansible.builtin.file:
     path: "/mnt/{{ inventory_hostname.split('.')[0] }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Check if mount tag exists
-  shell: cat /proc/mounts | grep -q "{{ virtfs_mount_tag }}"
+  ansible.builtin.shell: cat /proc/mounts | grep -q "{{ virtfs_mount_tag }}"
   register: mount_exists
   failed_when: false
   changed_when: false
   become: true
 
 - name: Mount the virtfs shared directory
-  mount:
+  ansible.posix.mount:
     path: "/mnt/{{ inventory_hostname.split('.')[0] }}"
     src: "{{ virtfs_mount_tag }}"
     fstype: 9p
@@ -26,10 +26,10 @@
   become: true
 
 - name: Ensure mount persists on reboot by adding to fstab
-  mount:
+  ansible.posix.mount:
     path: "/mnt/{{ inventory_hostname.split('.')[0] }}"
     src: "{{ virtfs_mount_tag }}"
     fstype: 9p
     opts: "trans=virtio,version=9p2000.L,rw"
     state: present
-  become: true 
+  become: true

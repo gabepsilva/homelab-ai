@@ -11,4 +11,4 @@ jenkins_volume_name: jenkins_home
 
 # Podman configuration
 podman_socket_enabled: false
-systemd_user: ubuntu 
+systemd_user: ubuntu

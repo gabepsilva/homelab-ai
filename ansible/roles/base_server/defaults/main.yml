@@ -10,7 +10,6 @@ ssh_port: 22
 
 # Additional packages to install (can be overridden in host/group vars)
 additional_packages: []
-
 # System update settings
 perform_system_update: true
-reboot_after_kernel_update: false 
+reboot_after_kernel_update: false

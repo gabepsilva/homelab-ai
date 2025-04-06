@@ -2,7 +2,7 @@
 # Tasks for jenkins_podman role
 
 - name: Install required packages for Podman
-  package:
+  ansible.builtin.package:
     name:
       - podman
       - python3-podman
@@ -13,32 +13,31 @@
     - podman
 
 - name: Create Jenkins data directory
-  file:
+  ansible.builtin.file:
     path: "{{ jenkins_home_dir }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
     owner: "{{ systemd_user }}"
     group: "{{ systemd_user }}"
   become: true
   tags: jenkins
 
 - name: Set permissions on Jenkins data directory
-  file:
+  ansible.builtin.file:
     path: "{{ jenkins_home_dir }}"
     state: directory
     owner: "{{ systemd_user }}"
     group: "{{ systemd_user }}"
-    mode: '0755'
+    mode: "0755"
     recurse: true
   become: true
   tags: jenkins
 
-
 - name: Create systemd user directory
-  file:
+  ansible.builtin.file:
     path: "/home/{{ systemd_user }}/.config/systemd/user"
     state: directory
-    mode: '0755'
+    mode: "0755"
     owner: "{{ systemd_user }}"
     group: "{{ systemd_user }}"
   become: true
@@ -46,10 +45,10 @@
   tags: jenkins
 
 - name: Create containers directory
-  file:
+  ansible.builtin.file:
     path: "/home/{{ systemd_user }}/.config/containers/systemd"
     state: directory
-    mode: '0755'
+    mode: "0755"
     owner: "{{ systemd_user }}"
     group: "{{ systemd_user }}"
   become: true
@@ -57,10 +56,10 @@
   tags: jenkins
 
 - name: Deploy Jenkins container Quadlet file
-  template:
+  ansible.builtin.template:
     src: jenkins.container
     dest: "/home/{{ systemd_user }}/.config/containers/systemd/jenkins.container"
-    mode: '0644'
+    mode: "0644"
     owner: "{{ systemd_user }}"
     group: "{{ systemd_user }}"
   become: true
@@ -69,13 +68,13 @@
   notify: Reload user systemd
 
 - name: Enable user lingering for systemd user
-  command: loginctl enable-linger {{ systemd_user }}
+  ansible.builtin.command: loginctl enable-linger {{ systemd_user }}
   become: true
   changed_when: false
   tags: jenkins
 
 - name: Check if user podman.socket exists
-  stat:
+  ansible.builtin.stat:
     path: "/home/{{ systemd_user }}/.config/systemd/user/podman.socket"
   register: user_podman_socket_file
   become: true
@@ -85,7 +84,7 @@
     - podman
 
 - name: Enable and start user podman.socket
-  systemd:
+  ansible.builtin.systemd:
     name: podman.socket
     state: started
     enabled: true
@@ -98,18 +97,18 @@
     - podman
 
 - name: Reload user systemd daemon
-  shell: XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload
+  ansible.builtin.shell: XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload
   become: true
   become_user: "{{ systemd_user }}"
   changed_when: false
   tags: jenkins
 
 - name: Enable and start Jenkins container service for user
-  systemd:
+  ansible.builtin.systemd:
     name: jenkins.service
     state: started
     enabled: true
     scope: user
   become: true
   become_user: "{{ systemd_user }}"
-  tags: jenkins 
+  tags: jenkins

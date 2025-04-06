@@ -6,7 +6,7 @@
   hosts: jenkins_server
   become: true
   gather_facts: true
-  
+
   roles:
     - role: ../../roles/base_server
     - role: ../../roles/virtfs_mount
@@ -14,9 +14,9 @@
 
   post_tasks:
     - name: Report completion
-      debug:
+      ansible.builtin.debug:
         msg: "Jenkins server configuration completed successfully on {{ inventory_hostname }}"
-    
+
     - name: Show Jenkins access information
-      debug:
-        msg: "Jenkins is available at http://{{ inventory_hostname }}:{{ jenkins_http_port }}" 
+      ansible.builtin.debug:
+        msg: "Jenkins is available at http://{{ inventory_hostname }}:{{ jenkins_http_port }}"

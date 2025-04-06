@@ -2,30 +2,30 @@
 # Main tasks file for base_server role
 
 - name: Update apt cache
-  apt:
+  ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
   become: true
   when: ansible_os_family == "Debian"
 
 - name: Upgrade all packages
-  apt:
+  ansible.builtin.apt:
     upgrade: dist
   become: true
   when: ansible_os_family == "Debian"
 
 - name: Ensure git is not installed
-  package:
+  ansible.builtin.package:
     name: git
     state: absent
   become: true
 
 - name: Install essential packages
-  package:
+  ansible.builtin.package:
     name: "{{ item }}"
     state: present
   become: true
-  loop:  
+  loop:
     - htop
     - git
     - curl
@@ -38,24 +38,24 @@
     - sudo
 
 - name: Set timezone
-  timezone:
+  community.general.timezone:
     name: "{{ server_timezone }}"
   become: true
 
 - name: Check if NTP service exists (ntpsec)
-  stat:
+  ansible.builtin.stat:
     path: /lib/systemd/system/ntpsec.service
   register: ntpsec_exists
   become: true
 
 - name: Check if NTP service exists (ntp)
-  stat:
+  ansible.builtin.stat:
     path: /lib/systemd/system/ntp.service
   register: ntp_exists
   become: true
 
 - name: Ensure NTP service is running (ntpsec)
-  service:
+  ansible.builtin.service:
     name: ntpsec
     state: started
     enabled: true
@@ -63,7 +63,7 @@
   when: ntpsec_exists.stat.exists
 
 - name: Ensure NTP service is running (ntp)
-  service:
+  ansible.builtin.service:
     name: ntp
     state: started
     enabled: true
@@ -71,22 +71,21 @@
   when: ntp_exists.stat.exists
 
 - name: Configure SSH for security
-  template:
+  ansible.builtin.template:
     src: ssh_config.j2
     dest: /etc/ssh/sshd_config
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   become: true
   notify: restart ssh
 
 - name: Create a strong password policy
-  copy:
+  ansible.builtin.copy:
     src: pwquality.conf
     dest: /etc/security/pwquality.conf
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   become: true
-  when: ansible_os_family == "Debian" 
-  
+  when: ansible_os_family == "Debian"

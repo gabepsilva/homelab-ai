@@ -2,14 +2,14 @@
 # Handlers for jenkins_podman role
 
 - name: Reload user systemd
-  shell: XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload
+  ansible.builtin.shell: XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload
   become: true
   become_user: "{{ systemd_user }}"
-  
+
 - name: Restart Jenkins container
-  systemd:
+  ansible.builtin.systemd:
     name: jenkins.service
     state: restarted
     scope: user
   become: true
-  become_user: "{{ systemd_user }}" 
+  become_user: "{{ systemd_user }}"
