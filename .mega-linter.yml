@@ -1,0 +1,47 @@
+# MegaLinter Configuration File
+# See all options at: https://megalinter.io/configuration/
+
+# Core configuration
+APPLY_FIXES: none  # Can be set to 'all' or specific linters
+SHOW_ELAPSED_TIME: true
+FILEIO_REPORTER: true
+PARALLEL: true
+DISABLE_ERRORS: true  # Set to true to make CI pass even with errors
+
+# Report configuration
+REPORT_OUTPUT_FOLDER: megalinter-reports
+
+# Linters to enable (applies a default filter)
+ENABLE:
+  - YAML
+  - MARKDOWN
+  - BASH
+  - ANSIBLE
+  - JSON
+  - KUBERNETES
+  - PYTHON
+  - TERRAFORM
+  - SPELL
+
+# Linters to disable entirely
+DISABLE:
+  - REPOSITORY
+
+# Disable specific linters
+DISABLE_LINTERS:
+  - REPOSITORY_GIT_DIFF
+
+# Specific linter configurations
+KUBERNETES_KUBECONFORM_ARGUMENTS: "--ignore-missing-schemas"
+MARKDOWN_MARKDOWNLINT_CONFIG_FILE: .markdownlint.json
+
+# Filter files for specific linters
+YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: "(k8s/.*\\.tpl$|ansible/roles/external/.*)"
+FILTER_REGEX_INCLUDE: "ansible/.*\\.ya?ml$"  # Global filter instead of per-linter
+
+# Specific linter parameter overrides
+SPELL_MISSPELL_ARGUMENTS: "-locale=US"
+
+# CSpell configuration
+SPELL_CSPELL_DISABLE_ERRORS: true
+SPELL_CSPELL_ARGUMENTS: "--no-progress --words-dictionary=grype,devskim,venv,hardis,cyclonedx,secretlint,secretlintrc,bridgecrew,esbenp,armv,cpes,distro,logrus,unindexed" 

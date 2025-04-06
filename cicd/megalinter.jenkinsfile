@@ -1,0 +1,107 @@
+pipeline {
+    agent any
+
+    options {
+        ansiColor('xterm')
+    }
+
+    
+    environment {
+        // MegaLinter configuration
+        MEGALINTER_CONFIG = '.mega-linter.yml'
+        REPORT_OUTPUT_FOLDER = 'megalinter-reports'
+        VALIDATE_ALL_CODEBASE = 'true'
+        // Use the DISABLE_ERRORS setting from the configuration file
+        // DISABLE_ERRORS = 'false' 
+        ENABLE_LINTERS = ''  // Leave empty to enable all linters by default or specify comma-separated list
+    }
+    
+    stages {
+        stage('Prepare') {
+            steps {
+                // Clean the workspace to ensure a fresh start
+                cleanWs()
+                // We're already in the workspace, no need for checkout
+                echo "Using workspace: ${WORKSPACE}"
+                sh 'git clone https://github.com/gabepsilva/homelab-ai .'
+                
+                // Check if .mega-linter.yml exists
+                script {
+                    if (!fileExists('.mega-linter.yml')) {
+                        error "No .mega-linter.yml configuration file found in repository root. Please add one."
+                    } else {
+                        echo "Found .mega-linter.yml configuration file."
+                    }
+                }
+            }
+        }
+        
+        stage('Lint') {
+            steps {
+                // Check if Docker is available
+                sh 'docker --version || (echo "Docker is required to run MegaLinter" && exit 1)'
+                
+                // Run MegaLinter via Docker with try-catch to handle errors
+                script {
+                    try {
+                        sh '''
+                        # Clean previous reports
+                        rm -rf ${REPORT_OUTPUT_FOLDER} || true
+                        mkdir -p ${REPORT_OUTPUT_FOLDER}
+                        
+                        # Run MegaLinter Docker container
+                        docker run --rm \\
+                          -v $(pwd):/tmp/lint \\
+                          -e MEGALINTER_CONFIG=/tmp/lint/${MEGALINTER_CONFIG} \\
+                          -e REPORT_OUTPUT_FOLDER=/tmp/lint/${REPORT_OUTPUT_FOLDER} \\
+                          -e VALIDATE_ALL_CODEBASE=${VALIDATE_ALL_CODEBASE} \\
+                          -e ENABLE_LINTERS="${ENABLE_LINTERS}" \\
+                          oxsecurity/megalinter:v7.10.0
+                        
+                        # Set permissions for reports
+                        chmod -R 777 ${REPORT_OUTPUT_FOLDER} || true
+                        '''
+                    } catch (Exception e) {
+                        echo "MegaLinter found issues. Check the reports for details."
+                        // Store the reports even if there are errors
+                        sh "chmod -R 777 ${REPORT_OUTPUT_FOLDER} || true"
+                        // Don't propagate the error
+                        currentBuild.result = 'SUCCESS'
+                    }
+                }
+            }
+            
+            post {
+                success {
+                    echo 'Linting completed successfully!'
+                }
+                failure {
+                    script {
+                        // Force the build to pass even if MegaLinter finds errors
+                        echo 'Linting found issues! Check the reports for details.'
+                        // Set build to SUCCESS regardless of linting errors
+                        currentBuild.result = 'SUCCESS'
+                        // Ensure we exit with success
+                        sh 'exit 0'
+                    }
+                }
+                always {
+                    // Archive MegaLinter reports
+                    // archiveArtifacts artifacts: "${REPORT_OUTPUT_FOLDER}/**/*", allowEmptyArchive: true
+                    
+                    // Publish HTML reports
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: "${REPORT_OUTPUT_FOLDER}",
+                        reportFiles: 'index.html',
+                        reportName: 'MegaLinter Report'
+                    ])
+
+                    cleanWs()
+                }
+            }
+        }
+    }
+}

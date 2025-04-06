@@ -1,0 +1,39 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "dictionaries": ["en", "en-gb", "companies", "softwareTerms", "misc"],
+  "ignorePaths": [
+    "node_modules",
+    "venv",
+    ".git",
+    ".vscode",
+    "megalinter-reports",
+    "*.lock"
+  ],
+  "words": [
+    "armv",
+    "Bridgecrew",
+    "checkov",
+    "cpes",
+    "cyclonedx",
+    "devskim",
+    "distro",
+    "esbenp",
+    "grype",
+    "hardis",
+    "kics",
+    "logrus",
+    "lychee",
+    "megalinter",
+    "misspell",
+    "secretlint",
+    "secretlintrc",
+    "swiftlint",
+    "syft",
+    "trivy",
+    "trufflehog",
+    "unindexed",
+    "venv",
+    "yamllint"
+  ]
+} 
