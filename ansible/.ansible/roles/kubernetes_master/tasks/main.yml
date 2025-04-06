@@ -2,29 +2,32 @@
 # Main tasks file for kubernetes_master role
 
 - name: Add Kubernetes signing key
-  get_url:
+  ansible.builtin.get_url:
     url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
     dest: /tmp/kubernetes-apt-key.gpg
+    mode: '0644'
   become: true
   when: ansible_os_family == "Debian"
 
 - name: Dearmor key
-  shell: cat /tmp/kubernetes-apt-key.gpg | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  ansible.builtin.shell: |
+    set -o pipefail
+    cat /tmp/kubernetes-apt-key.gpg | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   become: true
   args:
     creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   when: ansible_os_family == "Debian"
 
 - name: Create kubernetes repository directory
-  file:
+  ansible.builtin.file:
     path: /etc/apt/keyrings
     state: directory
-    mode: '0755'
+    mode: "0755"
   become: true
   when: ansible_os_family == "Debian"
 
 - name: Add Kubernetes repository
-  apt_repository:
+  ansible.builtin.apt_repository:
     repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /"
     state: present
     filename: kubernetes
@@ -32,41 +35,41 @@
   when: ansible_os_family == "Debian"
 
 - name: Update apt cache
-  apt:
+  ansible.builtin.apt:
     update_cache: true
   become: true
   when: ansible_os_family == "Debian"
 
 - name: Install containerd
-  apt:
+  ansible.builtin.apt:
     name: containerd
     state: present
   become: true
   when: ansible_os_family == "Debian"
 
 - name: Create containerd directory
-  file:
+  ansible.builtin.file:
     path: /etc/containerd
     state: directory
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Configure containerd
-  shell: containerd config default > /etc/containerd/config.toml
+  ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
   become: true
   args:
     creates: /etc/containerd/config.toml
 
 - name: Edit containerd configuration to use systemd cgroup driver
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/containerd/config.toml
-    regexp: '^\s+SystemdCgroup = false'
-    line: '            SystemdCgroup = true'
+    regexp: "^\\s+SystemdCgroup = false"
+    line: "            SystemdCgroup = true"
   become: true
   notify: restart containerd
 
 - name: Install Kubernetes packages
-  apt:
+  ansible.builtin.apt:
     name: "{{ item }}"
     state: present
   become: true
@@ -78,7 +81,7 @@
   when: ansible_os_family == "Debian"
 
 - name: Hold Kubernetes packages
-  dpkg_selections:
+  ansible.builtin.dpkg_selections:
     name: "{{ item }}"
     selection: hold
   loop:
@@ -90,18 +93,20 @@
   when: ansible_os_family == "Debian"
 
 - name: Disable swap
-  command: swapoff -a
+  ansible.builtin.command:
+    cmd: swapoff -a
+    creates: /proc/swaps
   become: true
 
 - name: Remove swap from fstab
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/fstab
-    regexp: '.*swap.*'
+    regexp: ".*swap.*"
     state: absent
   become: true
 
 - name: Enable kernel modules
-  modprobe:
+  community.general.modprobe:
     name: "{{ item }}"
     state: present
   with_items:
@@ -110,140 +115,141 @@
   become: true
 
 - name: Add kernel modules to /etc/modules-load.d/
-  copy:
+  ansible.builtin.copy:
     content: |
       overlay
       br_netfilter
     dest: /etc/modules-load.d/kubernetes.conf
-    mode: '0644'
+    mode: "0644"
   become: true
 
 - name: Configure sysctl for Kubernetes
-  copy:
+  ansible.builtin.copy:
     content: |
       net.bridge.bridge-nf-call-iptables = 1
       net.bridge.bridge-nf-call-ip6tables = 1
       net.ipv4.ip_forward = 1
     dest: /etc/sysctl.d/99-kubernetes-cri.conf
-    mode: '0644'
+    mode: "0644"
   become: true
 
 - name: Apply sysctl changes
-  command: sysctl --system
+  ansible.builtin.command: sysctl --system
   become: true
+  register: sysrestart
+  changed_when: sysrestart.rc != 0
 
 - name: Check if Kubernetes reset is needed
-  stat:
+  ansible.builtin.stat:
     path: /var/lib/kubelet
   register: kube_conf
   become: true
 
 - name: Copy reset script
-  copy:
+  ansible.builtin.copy:
     src: reset-kubernetes.sh
     dest: /tmp/reset-kubernetes.sh
-    mode: '0755'
+    mode: "0755"
   become: true
   when: reset_kubernetes | default(false) | bool
 
 - name: Reset Kubernetes if needed
-  command: /tmp/reset-kubernetes.sh
+  ansible.builtin.command: /tmp/reset-kubernetes.sh
   become: true
   when: reset_kubernetes | default(false) | bool
 
 - name: Create kubeadm config directory
-  file:
+  ansible.builtin.file:
     path: /etc/kubernetes/kubeadm
     state: directory
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Create kubeadm config file
-  template:
+  ansible.builtin.template:
     src: kubeadm-config.yaml.j2
     dest: /etc/kubernetes/kubeadm/kubeadm-config.yaml
-    mode: '0644'
+    mode: "0644"
   become: true
 
 - name: Initialize Kubernetes cluster with config
-  command: kubeadm init --config=/etc/kubernetes/kubeadm/kubeadm-config.yaml --ignore-preflight-errors=all
+  ansible.builtin.command: kubeadm init --config=/etc/kubernetes/kubeadm/kubeadm-config.yaml --ignore-preflight-errors=all
   args:
     creates: /etc/kubernetes/admin.conf
   become: true
   register: kubeadm_init
 
 - name: Create .kube directory for root
-  file:
+  ansible.builtin.file:
     path: /root/.kube
     state: directory
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Copy kube admin config for root
-  copy:
+  ansible.builtin.copy:
     src: /etc/kubernetes/admin.conf
     dest: /root/.kube/config
     remote_src: true
-    mode: '0644'
+    mode: "0644"
   become: true
 
 - name: Create .kube directory for user
-  file:
+  ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.kube"
     state: directory
-    mode: '0755'
+    mode: "0755"
   when: ansible_user_id != 'root'
 
 - name: Copy kube admin config for user
-  copy:
+  ansible.builtin.copy:
     src: /etc/kubernetes/admin.conf
     dest: "{{ ansible_env.HOME }}/.kube/config"
     remote_src: true
-    mode: '0600'
+    mode: "0600"
     owner: "{{ ansible_user_id }}"
     group: "{{ ansible_user_gid }}"
   become: true
   when: ansible_user_id != 'root'
 
 - name: Create bashrc update script
-  copy:
+  ansible.builtin.copy:
     content: |
       #!/bin/bash
       grep -q "export KUBECONFIG=" ~/.bashrc || echo "export KUBECONFIG=~/.kube/config" >> ~/.bashrc
     dest: /tmp/update_bashrc.sh
-    mode: '0755'
+    mode: "0755"
   become: false
   when: ansible_user_id != 'root'
 
 - name: Run bashrc update script
-  command: /tmp/update_bashrc.sh
+  ansible.builtin.command: /tmp/update_bashrc.sh
   become: false
   when: ansible_user_id != 'root'
 
 - name: Wait for Kubernetes API to be ready
-  uri:
+  ansible.builtin.uri:
     url: "https://{{ apiserver_advertise_address }}:6443/version"
     method: GET
     return_content: true
-    validate_certs: false 
+    validate_certs: false
   register: api_version_response
   retries: 12
   delay: 10
   until: api_version_response.status == 200
 
 - name: Pause to allow Kubernetes API to initialize fully
-  pause:
+  ansible.builtin.pause:
     seconds: 10
 
 - name: Download network plugin manifest
-  get_url:
+  ansible.builtin.get_url:
     url: "{{ calico_manifest_url }}"
     dest: /tmp/network-plugin.yaml
-    mode: '0644'
-  #become: true
+    mode: "0644"
 
 - name: Install network plugin
-  shell: |
+  ansible.builtin.shell: |
     export KUBECONFIG=/etc/kubernetes/admin.conf
     kubectl apply -f /tmp/network-plugin.yaml
   args:
@@ -255,7 +261,7 @@
   become: true
 
 - name: Verify network plugin pods are running
-  shell: |
+  ansible.builtin.shell: |
     export KUBECONFIG=/etc/kubernetes/admin.conf
     kubectl wait --namespace=kube-system --for=condition=ready pods --selector k8s-app=calico-node
   args:
@@ -267,7 +273,7 @@
   become: true
 
 - name: Generate join command for worker nodes
-  shell: |
+  ansible.builtin.shell: |
     export KUBECONFIG=/etc/kubernetes/admin.conf
     kubeadm token create --print-join-command --ttl=24h0m0s
   args:
@@ -278,14 +284,14 @@
   ignore_errors: true
 
 - name: Store join command in a file
-  copy:
+  ansible.builtin.copy:
     content: "{{ join_command.stdout | default('') }}"
     dest: "{{ ansible_env.HOME }}/kubernetes_join_command.txt"
-    mode: '0644'
+    mode: "0644"
   when: join_command is succeeded and join_command.stdout is defined
 
 - name: Show cluster status
-  shell: |
+  ansible.builtin.shell: |
     export KUBECONFIG=/etc/kubernetes/admin.conf
     kubectl get nodes
   args:
@@ -293,4 +299,4 @@
   register: falsedes_status
   become: true
   changed_when: false
-  ignore_errors: true 
+  ignore_errors: true
