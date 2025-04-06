@@ -1,11 +1,14 @@
 #!/bin/bash
 
+# This script automates the execution of a Jenkins pipeline defined in a Jenkinsfile.
+# It creates a test job and adds the Jenkinsfile content as the job's configuration,
+# facilitating seamless CI/CD integration.
+
 # Configuration - change these values
 JENKINS_URL="http://jenkins-server.i.psilva.org:8080"
 JENKINS_USER="jenkinsAdmin"
 JENKINS_API_TOKEN=$(op read "op://Dev/jenkins_cli/password")
-# ../../.. goes to root of the project
-JENKINSFILE_PATH="ansible/playbooks/base_server/jenkinsfile"
+JENKINSFILE_PATH="ansible/apply_ansible_playbook.jenkinsfile"
 JOB_NAME="temp-pipeline-job"
 TEMP_JENKINSFILE="/tmp/temp_jenkinsfile"
 
@@ -50,13 +53,17 @@ fi
 # Copy the Jenkinsfile to a temporary location
 cp "$JENKINSFILE_PATH" "$TEMP_JENKINSFILE"
 
-# Create job config XML
+# Create job config XML with proper XML escaping
 echo "Creating job configuration from Jenkinsfile..."
+# Read Jenkinsfile content and escape XML special characters
+JENKINSFILE_CONTENT=$(cat "$TEMP_JENKINSFILE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&apos;/g')
+
+# Create the job config XML with escaped content
 cat > /tmp/job_config.xml << EOF
 <?xml version='1.1' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job">
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
-    <script>$(cat "$TEMP_JENKINSFILE")</script>
+    <script>$JENKINSFILE_CONTENT</script>
     <sandbox>true</sandbox>
   </definition>
   <triggers/>

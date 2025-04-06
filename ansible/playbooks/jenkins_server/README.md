@@ -1,29 +1,5 @@
 # Jenkins Server
 
-## Server Information
-- **Root User**: ubuntu
-- **Hostname**: jenkins-server.i.psilva.org
-- **Operating System**: Ubuntu 24.04.2 LTS (Noble Numbat)
-
-## Hardware Configuration
-- **CPU**: 
-  - Processor: AMD EPYC 7282 16-Core Processor
-  - CPU(s): 4 vCPUs
-- **Memory**: 
-  - Total RAM: 3.8GB
-  - Type: Virtual RAM (QEMU)
-  - Error Correction: Multi-bit ECC
-  - Available: 3.4GB
-  - Swap: None
-- **Storage**: 
-  - Root Volume (/): 15GB (2.4GB used)
-  - Boot Volume (/boot): 881MB
-  - EFI Volume (/boot/efi): 105MB
-- **Network**: 
-  - Interface: Virtio network device (eth0)
-  - Type: Virtual Ethernet Controller
-  - MAC Address: BC:24:11:86:9A:36
-  - MTU: 1500
 
 ## SSH Access
 Access to the server is managed through SSH with authorized keys:

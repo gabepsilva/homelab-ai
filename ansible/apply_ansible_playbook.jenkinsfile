@@ -1,0 +1,57 @@
+pipeline {
+  agent any
+  stages {
+    stage("Fetch Playbooks") {
+      steps {
+        script {
+          sshagent (credentials: ['jenkins-key']) {
+            //Clone the ansible folder from the homelab-ai repo
+            sh "git clone https://github.com/gabepsilva/homelab-ai.git"
+
+            // Build a list of all files ending in _playbook.yml
+            def playbooks = sh(script: "find . -name \"*_playbook.yml\"", returnStdout: true).trim().tokenize('\n')
+            echo "Playbooks: ${playbooks}"
+
+            // Define selectedPlaybook as a global variable
+            selectedPlaybook = input(message: 'Select a playbook to apply:', parameters: [
+              choice(name: 'Playbook', choices: playbooks.join('\n'), description: 'Choose a playbook'),
+              string(name: 'LimitHosts', defaultValue: '', description: 'Optional: Limit execution to specific hosts (leave empty to run the target hosts)')
+            ])
+            
+            // Extract the selected playbook and limit hosts
+            def playbook = selectedPlaybook['Playbook']
+            def limitHosts = selectedPlaybook['LimitHosts']
+            
+            // Store as global variables
+            env.SELECTED_PLAYBOOK = playbook
+            env.LIMIT_HOSTS = limitHosts
+          }
+        }
+      }
+    }
+    stage("Running playbook") {
+      steps {
+        script {
+          sshagent (credentials: ['jenkins-key']) {
+            // Run the playbook with --limit if limitHosts is not empty
+            if (env.LIMIT_HOSTS?.trim()) {
+              sh "ANSIBLE_CONFIG=homelab-ai/ansible/ansible.cfg ansible-playbook ${env.SELECTED_PLAYBOOK} -i homelab-ai/ansible/inventory.yml --limit ${env.LIMIT_HOSTS}"
+            } else {
+              sh "ANSIBLE_CONFIG=homelab-ai/ansible/ansible.cfg ansible-playbook ${env.SELECTED_PLAYBOOK} -i homelab-ai/ansible/inventory.yml"
+            }
+          }
+        }
+      }
+    }
+  }
+  post {
+    always {
+      script {
+        echo "Performing cleanup actions..."
+        sh "cd $WORKSPACE"
+        sh "rm -rf *"
+        sh "find . -name \".*\" -type f -exec rm -f {} +"
+      }
+    }
+  }
+}
