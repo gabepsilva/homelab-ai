@@ -6,7 +6,7 @@ pipeline {
         script {
           sshagent (credentials: ['jenkins-key']) {
             //Clone the ansible folder from the homelab-ai repo
-            sh "git clone https://github.com/gabepsilva/homelab-ai.git"
+            //sh "git clone https://github.com/gabepsilva/homelab-ai.git"
 
             // Build a list of all files ending in _playbook.yml
             def playbooks = sh(script: "find . -name \"*_playbook.yml\"", returnStdout: true).trim().tokenize('\n')

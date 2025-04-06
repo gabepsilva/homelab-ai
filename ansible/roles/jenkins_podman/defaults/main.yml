@@ -2,7 +2,7 @@
 # Default variables for jenkins_podman role
 
 # Jenkins configuration
-jenkins_image: docker.io/jenkins/jenkins:lts
+jenkins_image: docker.io/jenkins/jenkins:lts-jdk21
 jenkins_container_name: jenkins
 jenkins_http_port: 8080
 jenkins_agent_port: 50000

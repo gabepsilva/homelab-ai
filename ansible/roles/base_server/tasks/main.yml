@@ -14,25 +14,26 @@
   become: yes
   when: ansible_os_family == "Debian"
 
+- name: Ensure git is not installed
+  package:
+    name: git
+    state: absent
+  become: yes
+
 - name: Install essential packages
   package:
     name: "{{ item }}"
     state: present
   become: yes
-  loop:
-    - vim
+  loop:  
     - htop
-    - tmux
     - git
     - curl
     - wget
     - unzip
-    - net-tools
     - ca-certificates
     - gnupg
     - lsb-release
-    - python3
-    - python3-pip
     - ntp
     - sudo
 
@@ -88,3 +89,4 @@
     mode: 0644
   become: yes
   when: ansible_os_family == "Debian" 
+  
