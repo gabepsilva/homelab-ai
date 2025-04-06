@@ -10,7 +10,7 @@ pipeline {
                         echo "Hostnames: ${hostnames}"
 
                         // Create a dropdown for hostname selection
-                        def selectedHostname = input(message: 'Select a hostname:', parameters: [choice(name: 'Hostname', choices: hostnames.join('\n'), description: 'Choose a hostname')])
+                        selectedHostname = input(message: 'Select a hostname:', parameters: [choice(name: 'Hostname', choices: hostnames.join('\n'), description: 'Choose a hostname')])
 
 
                     }
@@ -23,19 +23,30 @@ pipeline {
                     sshagent (credentials: ['jenkins-key']) {
                         //Clone the ansible folder from the homelab-ai repo
                         sh "git clone https://github.com/gabepsilva/homelab-ai.git"
-                        sh "cd homelab-ai/ansible/playbooks"
 
                         // Build a list of all files ending in _playbook.yml
-                        def playbooks = sh(script: "ls *_playbook.yml", returnStdout: true).trim().tokenize('\n')
+                        def playbooks = sh(script: "find . -name \"*_playbook.yml\"", returnStdout: true).trim().tokenize('\n')
                         echo "Playbooks: ${playbooks}"
 
-                        // Create a dropdown for playbook selection
+                        // Define selectedPlaybook as a global variable
                         def selectedPlaybook = input(message: 'Select a playbook to apply:', parameters: [choice(name: 'Playbook', choices: playbooks.join('\n'), description: 'Choose a playbook')])
-
-                        // Apply the selected playbook to the selected hostname
-                        sh "ansible-playbook ${selectedPlaybook} -i ${selectedHostname}"
+                        echo "WORKSPACE: ${WORKSPACE}"
+                        sh 'pwd'
+                        sh "ANSIBLE_CONFIG=homelab-ai/ansible/ansible.cfg ansible-playbook ${selectedPlaybook} -i homelab-ai/ansible/inventory.yml"
                     }
                 }
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                echo "Performing cleanup actions..."
+                // Navigate to the root $WORKSPACE
+                sh "cd $WORKSPACE"
+                // Example cleanup command
+                sh "rm -rf *"
+                sh "find . -name \".*\" -type f -exec rm -f {} +"
             }
         }
     }

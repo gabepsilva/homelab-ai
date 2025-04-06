@@ -1,0 +1,24 @@
+---
+# Inventory file for server management
+
+all:
+  children:
+    # Most servers should be in the base_servers group
+    base_servers:
+      hosts:
+      children:
+        jenkins_servers:
+          hosts:
+            jenkins-server:
+              ansible_host: jenkins-server.i.psilva.org
+              ansible_user: ubuntu
+              jenkins_http_port: 8080
+              jenkins_agent_port: 50000
+              server_timezone: "UTC"
+            jenkins-worker1:
+              ansible_host: jenkins-worker1.i.psilva.org
+              ansible_user: ubuntu
+              jenkins_http_port: 8080
+              jenkins_agent_port: 50000
+              server_timezone: "UTC"          
+    # Add more server groups as needed

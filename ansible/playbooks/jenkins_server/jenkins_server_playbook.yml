@@ -8,9 +8,9 @@
   gather_facts: yes
   
   roles:
-    - role: ../ansible/roles/base_server
-    - role: ../ansible/roles/virtfs_mount
-    - role: ../ansible/roles/jenkins_podman
+    - role: ../../roles/base_server
+    - role: ../../roles/virtfs_mount
+    - role: ../../roles/jenkins_podman
 
   post_tasks:
     - name: Report completion
