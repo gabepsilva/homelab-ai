@@ -2,29 +2,29 @@
 # Main tasks file for kubernetes_worker role
 
 - name: Add Kubernetes signing key
-  get_url:
+  ansible.builtin.get_url:
     url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
     dest: /tmp/kubernetes-apt-key.gpg
   become: true
   when: ansible_os_family == "Debian"
 
 - name: Dearmor key
-  shell: cat /tmp/kubernetes-apt-key.gpg | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  ansible.builtin.shell: cat /tmp/kubernetes-apt-key.gpg | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   become: true
   args:
     creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   when: ansible_os_family == "Debian"
 
 - name: Create kubernetes repository directory
-  file:
+  ansible.builtin.file:
     path: /etc/apt/keyrings
     state: directory
-    mode: '0755'
+    mode: "0755"
   become: true
   when: ansible_os_family == "Debian"
 
 - name: Add Kubernetes repository
-  apt_repository:
+  ansible.builtin.apt_repository:
     repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /"
     state: present
     filename: kubernetes
@@ -32,41 +32,41 @@
   when: ansible_os_family == "Debian"
 
 - name: Update apt cache
-  apt:
+  ansible.builtin.apt:
     update_cache: true
   become: true
   when: ansible_os_family == "Debian"
 
 - name: Install containerd
-  apt:
+  ansible.builtin.apt:
     name: containerd
     state: present
   become: true
   when: ansible_os_family == "Debian"
 
 - name: Create containerd directory
-  file:
+  ansible.builtin.file:
     path: /etc/containerd
     state: directory
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Configure containerd
-  shell: containerd config default > /etc/containerd/config.toml
+  ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
   become: true
   args:
     creates: /etc/containerd/config.toml
 
 - name: Edit containerd configuration to use systemd cgroup driver
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/containerd/config.toml
-    regexp: '^\s+SystemdCgroup = false'
-    line: '            SystemdCgroup = true'
+    regexp: "^\\s+SystemdCgroup = false"
+    line: "            SystemdCgroup = true"
   become: true
   notify: restart containerd
 
 - name: Install Kubernetes packages
-  apt:
+  ansible.builtin.apt:
     name: "{{ item }}"
     state: present
   become: true
@@ -78,7 +78,7 @@
   when: ansible_os_family == "Debian"
 
 - name: Hold Kubernetes packages
-  dpkg_selections:
+  ansible.builtin.dpkg_selections:
     name: "{{ item }}"
     selection: hold
   loop:
@@ -90,18 +90,18 @@
   when: ansible_os_family == "Debian"
 
 - name: Disable swap
-  command: swapoff -a
+  ansible.builtin.command: swapoff -a
   become: true
 
 - name: Remove swap from fstab
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/fstab
-    regexp: '.*swap.*'
+    regexp: ".*swap.*"
     state: absent
   become: true
 
 - name: Enable kernel modules
-  modprobe:
+  community.general.modprobe:
     name: "{{ item }}"
     state: present
   with_items:
@@ -110,24 +110,26 @@
   become: true
 
 - name: Add kernel modules to /etc/modules-load.d/
-  copy:
+  ansible.builtin.copy:
     content: |
       overlay
       br_netfilter
     dest: /etc/modules-load.d/kubernetes.conf
-    mode: '0644'
+    mode: "0644"
   become: true
 
 - name: Configure sysctl for Kubernetes
-  copy:
+  ansible.builtin.copy:
     content: |
       net.bridge.bridge-nf-call-iptables = 1
       net.bridge.bridge-nf-call-ip6tables = 1
       net.ipv4.ip_forward = 1
     dest: /etc/sysctl.d/99-kubernetes-cri.conf
-    mode: '0644'
+    mode: "0644"
   become: true
 
 - name: Apply sysctl changes immediately
-  command: sysctl --system
+  ansible.builtin.command: sysctl --system
   become: true
+  register: sysrestart
+  changed_when: sysrestart.rc != 0

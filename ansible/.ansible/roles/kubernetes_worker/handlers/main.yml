@@ -1,8 +1,8 @@
 ---
 # Handlers for kubernetes_worker role
 
-- name: restart containerd
-  service:
+- name: Restart containerd
+  ansible.builtin.service:
     name: containerd
     state: restarted
-  become: true 
+  become: true
