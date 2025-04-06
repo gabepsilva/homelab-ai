@@ -6,4 +6,4 @@
   vars:
     kubernetes_version: "1.32.2"
   roles:
-    - role: ../../../roles/kubernetes_worker 
+    - role: ../../roles/kubernetes_worker 
