@@ -8,9 +8,9 @@
   gather_facts: true
 
   roles:
-    - role: ../../roles/base_server
-    - role: ../../roles/virtfs_mount
-    - role: ../../roles/jenkins_podman
+    - role: base_server
+    - role: virtfs_mount
+    - role: jenkins_podman
 
   post_tasks:
     - name: Report completion

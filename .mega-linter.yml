@@ -25,12 +25,12 @@ ENABLE:
   - SPELL
 
 # Linters to disable entirely
-DISABLE:
-  - REPOSITORY
+#DISABLE:
+#  - REPOSITORY
 
 # Disable specific linters
-DISABLE_LINTERS:
-  - REPOSITORY_GIT_DIFF
+#DISABLE_LINTERS:
+#  - REPOSITORY_GIT_DIFF
 
 # Specific linter configurations
 KUBERNETES_KUBECONFORM_ARGUMENTS: "--ignore-missing-schemas"
