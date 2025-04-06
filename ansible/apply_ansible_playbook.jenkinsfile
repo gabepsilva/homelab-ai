@@ -35,9 +35,9 @@ pipeline {
           sshagent (credentials: ['jenkins-key']) {
             // Run the playbook with --limit if limitHosts is not empty
             if (env.LIMIT_HOSTS?.trim()) {
-              sh "ANSIBLE_CONFIG=homelab-ai/ansible/ansible.cfg ansible-playbook ${env.SELECTED_PLAYBOOK} -i ansible/inventory.yml --limit ${env.LIMIT_HOSTS}"
+              sh "ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook ${env.SELECTED_PLAYBOOK} -i ansible/inventory.yml --limit ${env.LIMIT_HOSTS}"
             } else {
-              sh "ANSIBLE_CONFIG=homelab-ai/ansible/ansible.cfg ansible-playbook ${env.SELECTED_PLAYBOOK} -i ansible/inventory.yml"
+              sh "ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook ${env.SELECTED_PLAYBOOK} -i ansible/inventory.yml"
             }
           }
         }
