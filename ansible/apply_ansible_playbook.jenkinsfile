@@ -1,5 +1,8 @@
 pipeline {
   agent any
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '50'))
+  }
   stages {
     stage("Fetch Playbooks") {
       steps {
@@ -25,6 +28,12 @@ pipeline {
             // Store as global variables
             env.SELECTED_PLAYBOOK = playbook
             env.LIMIT_HOSTS = limitHosts
+            
+            // Extract just the filename without the path
+            def playbookFileName = playbook.tokenize('/').last()
+            
+            // Set the build display name to job number + playbook filename
+            currentBuild.displayName = "#${BUILD_NUMBER} - ${playbookFileName}"
           }
         }
       }
