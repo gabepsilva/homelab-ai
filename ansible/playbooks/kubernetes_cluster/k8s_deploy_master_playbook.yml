@@ -2,7 +2,7 @@
 # Main Kubernetes deployment playbook
 - name: Deploy Kubernetes Master
   hosts: kubernetes_master_nodes
-  gather_facts: yes
+  gather_facts: true
   vars:
     apiserver_advertise_address: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}"
     pod_network_cidr: "10.244.0.0/16"

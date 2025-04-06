@@ -4,8 +4,8 @@
 
 - name: Deploy Jenkins Server
   hosts: jenkins_server
-  become: yes
-  gather_facts: yes
+  become: true
+  gather_facts: true
   
   roles:
     - role: ../../roles/base_server

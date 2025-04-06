@@ -5,12 +5,12 @@
   get_url:
     url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
     dest: /tmp/kubernetes-apt-key.gpg
-  become: yes
+  become: true
   when: ansible_os_family == "Debian"
 
 - name: Dearmor key
   shell: cat /tmp/kubernetes-apt-key.gpg | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-  become: yes
+  become: true
   args:
     creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   when: ansible_os_family == "Debian"
@@ -20,7 +20,7 @@
     path: /etc/apt/keyrings
     state: directory
     mode: '0755'
-  become: yes
+  become: true
   when: ansible_os_family == "Debian"
 
 - name: Add Kubernetes repository
@@ -28,20 +28,20 @@
     repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /"
     state: present
     filename: kubernetes
-  become: yes
+  become: true
   when: ansible_os_family == "Debian"
 
 - name: Update apt cache
   apt:
-    update_cache: yes
-  become: yes
+    update_cache: true
+  become: true
   when: ansible_os_family == "Debian"
 
 - name: Install containerd
   apt:
     name: containerd
     state: present
-  become: yes
+  become: true
   when: ansible_os_family == "Debian"
 
 - name: Create containerd directory
@@ -49,11 +49,11 @@
     path: /etc/containerd
     state: directory
     mode: '0755'
-  become: yes
+  become: true
 
 - name: Configure containerd
   shell: containerd config default > /etc/containerd/config.toml
-  become: yes
+  become: true
   args:
     creates: /etc/containerd/config.toml
 
@@ -62,14 +62,14 @@
     path: /etc/containerd/config.toml
     regexp: '^\s+SystemdCgroup = false'
     line: '            SystemdCgroup = true'
-  become: yes
+  become: true
   notify: restart containerd
 
 - name: Install Kubernetes packages
   apt:
     name: "{{ item }}"
     state: present
-  become: yes
+  become: true
   loop:
     - kubelet
     - kubeadm
@@ -86,19 +86,19 @@
     - kubeadm
     - kubectl
     - containerd
-  become: yes
+  become: true
   when: ansible_os_family == "Debian"
 
 - name: Disable swap
   command: swapoff -a
-  become: yes
+  become: true
 
 - name: Remove swap from fstab
   lineinfile:
     path: /etc/fstab
     regexp: '.*swap.*'
     state: absent
-  become: yes
+  become: true
 
 - name: Enable kernel modules
   modprobe:
@@ -107,7 +107,7 @@
   with_items:
     - overlay
     - br_netfilter
-  become: yes
+  become: true
 
 - name: Add kernel modules to /etc/modules-load.d/
   copy:
@@ -116,7 +116,7 @@
       br_netfilter
     dest: /etc/modules-load.d/kubernetes.conf
     mode: '0644'
-  become: yes
+  become: true
 
 - name: Configure sysctl for Kubernetes
   copy:
@@ -126,29 +126,29 @@
       net.ipv4.ip_forward = 1
     dest: /etc/sysctl.d/99-kubernetes-cri.conf
     mode: '0644'
-  become: yes
+  become: true
 
 - name: Apply sysctl changes
   command: sysctl --system
-  become: yes
+  become: true
 
 - name: Check if Kubernetes reset is needed
   stat:
     path: /var/lib/kubelet
   register: kube_conf
-  become: yes
+  become: true
 
 - name: Copy reset script
   copy:
     src: reset-kubernetes.sh
     dest: /tmp/reset-kubernetes.sh
     mode: '0755'
-  become: yes
+  become: true
   when: reset_kubernetes | default(false) | bool
 
 - name: Reset Kubernetes if needed
   command: /tmp/reset-kubernetes.sh
-  become: yes
+  become: true
   when: reset_kubernetes | default(false) | bool
 
 - name: Create kubeadm config directory
@@ -156,20 +156,20 @@
     path: /etc/kubernetes/kubeadm
     state: directory
     mode: '0755'
-  become: yes
+  become: true
 
 - name: Create kubeadm config file
   template:
     src: kubeadm-config.yaml.j2
     dest: /etc/kubernetes/kubeadm/kubeadm-config.yaml
     mode: '0644'
-  become: yes
+  become: true
 
 - name: Initialize Kubernetes cluster with config
   command: kubeadm init --config=/etc/kubernetes/kubeadm/kubeadm-config.yaml --ignore-preflight-errors=all
   args:
     creates: /etc/kubernetes/admin.conf
-  become: yes
+  become: true
   register: kubeadm_init
 
 - name: Create .kube directory for root
@@ -177,15 +177,15 @@
     path: /root/.kube
     state: directory
     mode: '0755'
-  become: yes
+  become: true
 
 - name: Copy kube admin config for root
   copy:
     src: /etc/kubernetes/admin.conf
     dest: /root/.kube/config
-    remote_src: yes
+    remote_src: true
     mode: '0644'
-  become: yes
+  become: true
 
 - name: Create .kube directory for user
   file:
@@ -198,11 +198,11 @@
   copy:
     src: /etc/kubernetes/admin.conf
     dest: "{{ ansible_env.HOME }}/.kube/config"
-    remote_src: yes
+    remote_src: true
     mode: '0600'
     owner: "{{ ansible_user_id }}"
     group: "{{ ansible_user_gid }}"
-  become: yes
+  become: true
   when: ansible_user_id != 'root'
 
 - name: Create bashrc update script
@@ -212,20 +212,20 @@
       grep -q "export KUBECONFIG=" ~/.bashrc || echo "export KUBECONFIG=~/.kube/config" >> ~/.bashrc
     dest: /tmp/update_bashrc.sh
     mode: '0755'
-  become: no
+  become: false
   when: ansible_user_id != 'root'
 
 - name: Run bashrc update script
   command: /tmp/update_bashrc.sh
-  become: no
+  become: false
   when: ansible_user_id != 'root'
 
 - name: Wait for Kubernetes API to be ready
   uri:
     url: "https://{{ apiserver_advertise_address }}:6443/version"
     method: GET
-    return_content: yes
-    validate_certs: no 
+    return_content: true
+    validate_certs: false 
   register: api_version_response
   retries: 12
   delay: 10
@@ -240,7 +240,7 @@
     url: "{{ calico_manifest_url }}"
     dest: /tmp/network-plugin.yaml
     mode: '0644'
-  #become: yes
+  #become: true
 
 - name: Install network plugin
   shell: |
@@ -252,7 +252,7 @@
   until: network_result.rc == 0
   retries: 3
   delay: 5
-  become: yes
+  become: true
 
 - name: Verify network plugin pods are running
   shell: |
@@ -264,7 +264,7 @@
   retries: 10
   delay: 5
   until: network_pods_check is succeeded
-  become: yes
+  become: true
 
 - name: Generate join command for worker nodes
   shell: |
@@ -272,10 +272,10 @@
     kubeadm token create --print-join-command --ttl=24h0m0s
   args:
     executable: /bin/bash
-  become: yes
+  become: true
   register: join_command
   changed_when: false
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Store join command in a file
   copy:
@@ -290,7 +290,7 @@
     kubectl get nodes
   args:
     executable: /bin/bash
-  register: nodes_status
-  become: yes
+  register: falsedes_status
+  become: true
   changed_when: false
-  ignore_errors: yes 
+  ignore_errors: true 

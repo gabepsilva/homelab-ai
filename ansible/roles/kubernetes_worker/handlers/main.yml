@@ -5,4 +5,4 @@
   service:
     name: containerd
     state: restarted
-  become: yes 
+  become: true 

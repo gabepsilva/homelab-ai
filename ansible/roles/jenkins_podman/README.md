@@ -39,7 +39,7 @@ systemd_user: ubuntu
 ```yaml
 - name: Deploy Jenkins server
   hosts: jenkins_servers
-  become: yes
+  become: true
   roles:
     - role: base_server
       tags: 

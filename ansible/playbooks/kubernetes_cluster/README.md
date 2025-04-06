@@ -134,7 +134,7 @@ kubectl taint nodes <node-name> key=value:NoSchedule
 # Remove a taint from a node
 kubectl taint nodes <node-name> key:NoSchedule-
 
-# Common taint effects: NoSchedule, PreferNoSchedule, NoExecute
+# Common taint effects: falseSchedule, PreferNoSchedule, NoExecute
 ```
 
 ### Restarting Kubernetes Services

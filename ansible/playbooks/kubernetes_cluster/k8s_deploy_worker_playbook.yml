@@ -2,7 +2,7 @@
 # Kubernetes worker deployment playbook
 - name: Deploy Kubernetes Worker Nodes
   hosts: kubernetes_worker_nodes
-  gather_facts: yes
+  gather_facts: true
   vars:
     kubernetes_version: "1.32.2"
   roles:

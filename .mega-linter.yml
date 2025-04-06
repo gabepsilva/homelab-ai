@@ -2,7 +2,7 @@
 # See all options at: https://megalinter.io/configuration/
 
 # Core configuration
-APPLY_FIXES: none  # Can be set to 'all' or specific linters
+APPLY_FIXES: falsene  # Can be set to 'all' or specific linters
 SHOW_ELAPSED_TIME: true
 FILEIO_REPORTER: true
 PARALLEL: true

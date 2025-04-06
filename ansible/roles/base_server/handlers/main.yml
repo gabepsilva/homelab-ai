@@ -5,10 +5,10 @@
   service:
     name: ssh
     state: restarted
-  become: yes
+  become: true
 
 - name: reload ufw
   service:
     name: ufw
     state: reloaded
-  become: yes 
+  become: true 

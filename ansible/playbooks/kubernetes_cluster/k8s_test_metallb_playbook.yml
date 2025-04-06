@@ -2,7 +2,7 @@
 # MetalLB test playbook
 - name: Test MetalLB LoadBalancer functionality
   hosts: kubernetes_master_nodes
-  gather_facts: yes
+  gather_facts: true
   tasks:
     - name: Verify MetalLB installation
       block:
@@ -13,7 +13,7 @@
           register: metallb_namespace
           changed_when: false
           failed_when: metallb_namespace.rc != 0
-          become: yes
+          become: true
 
         - name: Check MetalLB controller and speaker pods are running
           shell: |
@@ -21,7 +21,7 @@
             kubectl get pods -n metallb-system
           register: metallb_pods
           changed_when: false
-          become: yes
+          become: true
 
         - name: Verify IPAddressPool is configured
           shell: |
@@ -29,7 +29,7 @@
             kubectl get ipaddresspool -n metallb-system first-pool -o jsonpath='{.spec.addresses}'
           register: metallb_ip_pool
           changed_when: false
-          become: yes
+          become: true
 
         - name: Display MetalLB components status
           debug:
@@ -48,7 +48,7 @@
           register: test_namespace
           changed_when: false
           failed_when: test_namespace.rc != 0 and "AlreadyExists" not in test_namespace.stderr
-          become: yes
+          become: true
 
         - name: Deploy test nginx application
           shell: |
@@ -77,7 +77,7 @@
             EOF
           register: nginx_deployment
           changed_when: false
-          become: yes
+          become: true
 
         - name: Create LoadBalancer service for nginx
           shell: |
@@ -98,7 +98,7 @@
             EOF
           register: lb_service
           changed_when: false
-          become: yes
+          become: true
 
         - name: Wait for deployment to be ready
           shell: |
@@ -106,8 +106,8 @@
             kubectl wait --namespace=metallb-test --for=condition=available deployment/nginx-test --timeout=60s
           register: nginx_ready
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
 
         - name: Get LoadBalancer External IP
           shell: |
@@ -115,8 +115,8 @@
             kubectl get service nginx-lb -n metallb-test -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
           register: lb_ip
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
           until: lb_ip.stdout != ""
           retries: 12
           delay: 5
@@ -127,8 +127,8 @@
             curl -s --connect-timeout 5 http://{{ lb_ip.stdout }}
           register: curl_result
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
           when: nginx_ready is succeeded and lb_ip.stdout != ""
 
         - name: Verify LoadBalancer IP is from configured pool
@@ -161,8 +161,8 @@
             EOF
           register: ip_in_pool
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
           when: nginx_ready is succeeded and lb_ip.stdout != ""
 
         - name: Display MetalLB test results
@@ -181,8 +181,8 @@
             kubectl delete namespace metallb-test
           register: test_cleanup
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
 
     - name: Test multiple LoadBalancer services
       block:
@@ -193,7 +193,7 @@
           register: multi_test_namespace
           changed_when: false
           failed_when: multi_test_namespace.rc != 0 and "AlreadyExists" not in multi_test_namespace.stderr
-          become: yes
+          become: true
 
         - name: Deploy two test services
           shell: |
@@ -269,7 +269,7 @@
             EOF
           register: multi_services
           changed_when: false
-          become: yes
+          become: true
 
         - name: Wait for deployments to be ready
           shell: |
@@ -278,8 +278,8 @@
             kubectl wait --namespace=metallb-multi-test --for=condition=available deployment/service-b --timeout=60s
           register: multi_ready
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
 
         - name: Get IPs for both services
           shell: |
@@ -287,7 +287,7 @@
             kubectl get services -n metallb-multi-test -o wide
           register: multi_ips
           changed_when: false
-          become: yes
+          become: true
           when: multi_ready is succeeded
 
         - name: Check if each service got a unique IP
@@ -310,8 +310,8 @@
             fi
           register: unique_ips
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
           when: multi_ready is succeeded
 
         - name: Display multiple service test results
@@ -328,5 +328,5 @@
             kubectl delete namespace metallb-multi-test
           register: multi_cleanup
           changed_when: false
-          ignore_errors: yes
-          become: yes 
+          ignore_errors: true
+          become: true 

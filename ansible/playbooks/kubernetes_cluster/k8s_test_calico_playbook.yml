@@ -2,7 +2,7 @@
 # Kubernetes cluster and Calico test playbook
 - name: Test Kubernetes Cluster and Calico
   hosts: kubernetes_master_nodes
-  gather_facts: yes
+  gather_facts: true
   tasks:
     - name: Include test tasks
       include_tasks: ../../roles/kubernetes_master/tasks/test-cluster.yml
@@ -16,7 +16,7 @@
           register: np_namespace
           changed_when: false
           failed_when: np_namespace.rc != 0 and "AlreadyExists" not in np_namespace.stderr
-          become: yes
+          become: true
 
         - name: Create test pods
           shell: |
@@ -51,7 +51,7 @@
             EOF
           register: create_np_pods
           changed_when: false
-          become: yes
+          become: true
 
         - name: Wait for test pods to be running
           shell: |
@@ -60,8 +60,8 @@
             kubectl wait --namespace=policy-test --for=condition=ready pod/pod-b --timeout=60s
           register: np_pods_ready
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
 
         - name: Test connectivity before network policy
           shell: |
@@ -70,8 +70,8 @@
             kubectl exec -n policy-test pod-b -- wget -T 5 -O- http://$POD_A_IP
           register: connectivity_before
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
           when: np_pods_ready is succeeded
 
         - name: Apply restrictive network policy
@@ -90,7 +90,7 @@
             EOF
           register: apply_policy
           changed_when: false
-          become: yes
+          become: true
           when: np_pods_ready is succeeded
 
         - name: Test connectivity after network policy (should fail)
@@ -100,8 +100,8 @@
             kubectl exec -n policy-test pod-b -- wget -T 5 -O- http://$POD_A_IP
           register: connectivity_after
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
           when: np_pods_ready is succeeded and apply_policy is succeeded
 
         - name: Display network policy test results
@@ -117,8 +117,8 @@
             kubectl delete namespace policy-test
           register: np_cleanup
           changed_when: false
-          ignore_errors: yes
-          become: yes
+          ignore_errors: true
+          become: true
 
     - name: Validate worker node Calico connectivity
       block:
@@ -128,7 +128,7 @@
             kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}'
           register: worker_node
           changed_when: false
-          become: yes
+          become: true
 
         - name: Check Calico pods on worker node
           shell: |
@@ -136,7 +136,7 @@
             kubectl get pods -n kube-system -l k8s-app=calico-node -o wide | grep {{ worker_node.stdout }}
           register: worker_calico
           changed_when: false
-          become: yes
+          become: true
           when: worker_node.stdout is defined and worker_node.stdout != ""
 
         - name: Display worker node Calico status

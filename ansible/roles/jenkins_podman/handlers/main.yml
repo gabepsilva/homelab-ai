@@ -3,7 +3,7 @@
 
 - name: Reload user systemd
   shell: XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload
-  become: yes
+  become: true
   become_user: "{{ systemd_user }}"
   
 - name: Restart Jenkins container
@@ -11,5 +11,5 @@
     name: jenkins.service
     state: restarted
     scope: user
-  become: yes
+  become: true
   become_user: "{{ systemd_user }}" 

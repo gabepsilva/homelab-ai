@@ -7,7 +7,7 @@
       - podman
       - python3-podman
     state: present
-  become: yes
+  become: true
   tags:
     - jenkins
     - podman
@@ -19,7 +19,7 @@
     mode: '0755'
     owner: "{{ systemd_user }}"
     group: "{{ systemd_user }}"
-  become: yes
+  become: true
   tags: jenkins
 
 - name: Set permissions on Jenkins data directory
@@ -29,8 +29,8 @@
     owner: "{{ systemd_user }}"
     group: "{{ systemd_user }}"
     mode: '0755'
-    recurse: yes
-  become: yes
+    recurse: true
+  become: true
   tags: jenkins
 
 
@@ -41,7 +41,7 @@
     mode: '0755'
     owner: "{{ systemd_user }}"
     group: "{{ systemd_user }}"
-  become: yes
+  become: true
   become_user: "{{ systemd_user }}"
   tags: jenkins
 
@@ -52,7 +52,7 @@
     mode: '0755'
     owner: "{{ systemd_user }}"
     group: "{{ systemd_user }}"
-  become: yes
+  become: true
   become_user: "{{ systemd_user }}"
   tags: jenkins
 
@@ -63,14 +63,14 @@
     mode: '0644'
     owner: "{{ systemd_user }}"
     group: "{{ systemd_user }}"
-  become: yes
+  become: true
   become_user: "{{ systemd_user }}"
   tags: jenkins
   notify: Reload user systemd
 
 - name: Enable user lingering for systemd user
   command: loginctl enable-linger {{ systemd_user }}
-  become: yes
+  become: true
   changed_when: false
   tags: jenkins
 
@@ -78,7 +78,7 @@
   stat:
     path: "/home/{{ systemd_user }}/.config/systemd/user/podman.socket"
   register: user_podman_socket_file
-  become: yes
+  become: true
   become_user: "{{ systemd_user }}"
   tags:
     - jenkins
@@ -88,9 +88,9 @@
   systemd:
     name: podman.socket
     state: started
-    enabled: yes
+    enabled: true
     scope: user
-  become: yes
+  become: true
   become_user: "{{ systemd_user }}"
   when: podman_socket_enabled and user_podman_socket_file.stat.exists
   tags:
@@ -99,7 +99,7 @@
 
 - name: Reload user systemd daemon
   shell: XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload
-  become: yes
+  become: true
   become_user: "{{ systemd_user }}"
   changed_when: false
   tags: jenkins
@@ -108,8 +108,8 @@
   systemd:
     name: jenkins.service
     state: started
-    enabled: yes
+    enabled: true
     scope: user
-  become: yes
+  become: true
   become_user: "{{ systemd_user }}"
   tags: jenkins 

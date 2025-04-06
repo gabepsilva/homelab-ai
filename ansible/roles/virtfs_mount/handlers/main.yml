@@ -3,4 +3,4 @@
 
 - name: remount filesystem
   command: mount -a
-  become: yes 
+  become: true 

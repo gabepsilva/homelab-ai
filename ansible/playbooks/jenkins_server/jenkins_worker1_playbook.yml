@@ -4,8 +4,8 @@
 
 - name: Deploy Jenkins Server
   hosts: jenkins_worker1
-  become: yes
-  gather_facts: yes
+  become: true
+  gather_facts: true
   
   roles:
     - role: ../../roles/base_server
@@ -16,7 +16,7 @@
       apt:
         name: openjdk-21-jre-headless
         state: present
-        update_cache: yes
+        update_cache: true
     
     - name: Install Ansible
       apt:
@@ -65,13 +65,13 @@
           - docker-ce-cli
           - containerd.io
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Add ubuntu user to docker group
       user:
         name: ubuntu
         groups: docker
-        append: yes
+        append: true
 
     - name: Install 1Password CLI
       block:
@@ -86,7 +86,7 @@
           apt:
             name: 1password-cli
             state: present
-            update_cache: yes
+            update_cache: true
 
     - name: Install pipx to manage Python packages
       apt:
@@ -101,7 +101,7 @@
         pipx ensurepath
       args:
         creates: /home/ubuntu/.local/bin/pipx
-      become: yes
+      become: true
       become_user: ubuntu
 
     - name: Install Python applications for CI using pipx
@@ -115,7 +115,7 @@
         - black
         - yamllint
         - ansible-lint
-      become: yes
+      become: true
       become_user: ubuntu
     
     - name: Create Python virtual environment for CI libraries
@@ -123,7 +123,7 @@
         python3 -m venv /home/ubuntu/ci-venv
       args:
         creates: /home/ubuntu/ci-venv/bin/python
-      become: yes
+      become: true
       become_user: ubuntu
     
     - name: Install Python libraries in virtual environment
@@ -131,7 +131,7 @@
         /home/ubuntu/ci-venv/bin/pip install pytest-cov
       args:
         creates: /home/ubuntu/ci-venv/lib/python3.*/site-packages/pytest_cov*
-      become: yes
+      become: true
       become_user: ubuntu
     
     - name: Download Jenkins agent.jar
@@ -174,8 +174,8 @@
       systemd:
         name: jenkins-agent
         state: started
-        enabled: yes
-        daemon_reload: yes
+        enabled: true
+        daemon_reload: true
 
     - name: Reminder to edit secret file
       debug:
@@ -188,4 +188,3 @@
     - name: Report completion
       debug:
         msg: "Jenkins server configuration completed successfully on {{ inventory_hostname }}"
-    

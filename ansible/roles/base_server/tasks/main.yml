@@ -3,28 +3,28 @@
 
 - name: Update apt cache
   apt:
-    update_cache: yes
+    update_cache: true
     cache_valid_time: 3600
-  become: yes
+  become: true
   when: ansible_os_family == "Debian"
 
 - name: Upgrade all packages
   apt:
     upgrade: dist
-  become: yes
+  become: true
   when: ansible_os_family == "Debian"
 
 - name: Ensure git is not installed
   package:
     name: git
     state: absent
-  become: yes
+  become: true
 
 - name: Install essential packages
   package:
     name: "{{ item }}"
     state: present
-  become: yes
+  become: true
   loop:  
     - htop
     - git
@@ -40,34 +40,34 @@
 - name: Set timezone
   timezone:
     name: "{{ server_timezone }}"
-  become: yes
+  become: true
 
 - name: Check if NTP service exists (ntpsec)
   stat:
     path: /lib/systemd/system/ntpsec.service
   register: ntpsec_exists
-  become: yes
+  become: true
 
 - name: Check if NTP service exists (ntp)
   stat:
     path: /lib/systemd/system/ntp.service
   register: ntp_exists
-  become: yes
+  become: true
 
 - name: Ensure NTP service is running (ntpsec)
   service:
     name: ntpsec
     state: started
-    enabled: yes
-  become: yes
+    enabled: true
+  become: true
   when: ntpsec_exists.stat.exists
 
 - name: Ensure NTP service is running (ntp)
   service:
     name: ntp
     state: started
-    enabled: yes
-  become: yes
+    enabled: true
+  become: true
   when: ntp_exists.stat.exists
 
 - name: Configure SSH for security
@@ -77,7 +77,7 @@
     owner: root
     group: root
     mode: 0644
-  become: yes
+  become: true
   notify: restart ssh
 
 - name: Create a strong password policy
@@ -87,6 +87,6 @@
     owner: root
     group: root
     mode: 0644
-  become: yes
+  become: true
   when: ansible_os_family == "Debian" 
   

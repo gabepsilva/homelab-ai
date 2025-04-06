@@ -5,10 +5,10 @@
   service:
     name: containerd
     state: restarted
-  become: yes
+  become: true
 
 - name: restart kubelet
   service:
     name: kubelet
     state: restarted
-  become: yes 
+  become: true 
