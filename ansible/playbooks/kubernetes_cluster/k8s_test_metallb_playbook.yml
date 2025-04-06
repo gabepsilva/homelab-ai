@@ -7,7 +7,8 @@
     - name: Verify MetalLB installation
       block:
         - name: Check MetalLB namespace exists
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl get namespace metallb-system
           register: metallb_namespace
@@ -16,7 +17,8 @@
           become: true
 
         - name: Check MetalLB controller and speaker pods are running
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl get pods -n metallb-system
           register: metallb_pods
@@ -24,7 +26,8 @@
           become: true
 
         - name: Verify IPAddressPool is configured
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl get ipaddresspool -n metallb-system first-pool -o jsonpath='{.spec.addresses}'
           register: metallb_ip_pool
@@ -32,17 +35,18 @@
           become: true
 
         - name: Display MetalLB components status
-          debug:
+          ansible.builtin.debug:
             msg: |
               MetalLB namespace: Present
-              MetalLB pods: 
+              MetalLB pods:
               {{ metallb_pods.stdout_lines }}
               IP Address Pool: {{ metallb_ip_pool.stdout }}
 
     - name: Test LoadBalancer service functionality
       block:
         - name: Create test namespace
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl create namespace metallb-test
           register: test_namespace
@@ -51,7 +55,8 @@
           become: true
 
         - name: Deploy test nginx application
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             cat <<EOF | kubectl apply -f -
             apiVersion: apps/v1
@@ -80,7 +85,8 @@
           become: true
 
         - name: Create LoadBalancer service for nginx
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             cat <<EOF | kubectl apply -f -
             apiVersion: v1
@@ -101,7 +107,8 @@
           become: true
 
         - name: Wait for deployment to be ready
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl wait --namespace=metallb-test --for=condition=available deployment/nginx-test --timeout=60s
           register: nginx_ready
@@ -110,7 +117,8 @@
           become: true
 
         - name: Get LoadBalancer External IP
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl get service nginx-lb -n metallb-test -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
           register: lb_ip
@@ -123,7 +131,8 @@
           when: nginx_ready is succeeded
 
         - name: Test connection to LoadBalancer IP
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             curl -s --connect-timeout 5 http://{{ lb_ip.stdout }}
           register: curl_result
           changed_when: false
@@ -132,18 +141,19 @@
           when: nginx_ready is succeeded and lb_ip.stdout != ""
 
         - name: Verify LoadBalancer IP is from configured pool
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             POOL_RANGES="{{ metallb_ip_pool.stdout }}"
             LB_IP="{{ lb_ip.stdout }}"
-            
+
             python3 <<EOF
             import sys
             import ipaddress
-            
+
             lb_ip = "$LB_IP"
             pool_str = "$POOL_RANGES".replace('[', '').replace(']', '').replace('"', '')
-            
+
             in_pool = False
             for pool_range in pool_str.split(','):
                 pool_range = pool_range.strip()
@@ -151,11 +161,11 @@
                     start, end = pool_range.split('-')
                     start_ip = ipaddress.IPv4Address(start.strip())
                     end_ip = ipaddress.IPv4Address(end.strip())
-                    
+
                     if ipaddress.IPv4Address(lb_ip) >= start_ip and ipaddress.IPv4Address(lb_ip) <= end_ip:
                         print("IP is in configured pool")
                         sys.exit(0)
-            
+
             print("IP is NOT in configured pool")
             sys.exit(1)
             EOF
@@ -166,17 +176,18 @@
           when: nginx_ready is succeeded and lb_ip.stdout != ""
 
         - name: Display MetalLB test results
-          debug:
+          ansible.builtin.debug:
             msg: |
               LoadBalancer IP assigned: {{ lb_ip.stdout if lb_ip.stdout != "" else "Failed to get IP" }}
               Connection to LoadBalancer: {{ "Successful" if curl_result.rc == 0 else "Failed" }}
-              HTTP Response: 
+              HTTP Response:
               {{ curl_result.stdout_lines | default(["No response"]) }}
               IP from configured pool: {{ "Yes" if ip_in_pool is succeeded else "No" }}
           when: nginx_ready is succeeded
 
         - name: Cleanup test resources
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl delete namespace metallb-test
           register: test_cleanup
@@ -187,7 +198,8 @@
     - name: Test multiple LoadBalancer services
       block:
         - name: Create another test namespace
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl create namespace metallb-multi-test
           register: multi_test_namespace
@@ -196,7 +208,8 @@
           become: true
 
         - name: Deploy two test services
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             cat <<EOF | kubectl apply -f -
             apiVersion: apps/v1
@@ -272,7 +285,8 @@
           become: true
 
         - name: Wait for deployments to be ready
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl wait --namespace=metallb-multi-test --for=condition=available deployment/service-a --timeout=60s
             kubectl wait --namespace=metallb-multi-test --for=condition=available deployment/service-b --timeout=60s
@@ -282,7 +296,8 @@
           become: true
 
         - name: Get IPs for both services
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl get services -n metallb-multi-test -o wide
           register: multi_ips
@@ -291,16 +306,17 @@
           when: multi_ready is succeeded
 
         - name: Check if each service got a unique IP
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             IP_A=$(kubectl get service service-a-lb -n metallb-multi-test -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
             IP_B=$(kubectl get service service-b-lb -n metallb-multi-test -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-            
+
             if [ -z "$IP_A" ] || [ -z "$IP_B" ]; then
               echo "One or both services did not get an IP address"
               exit 1
             fi
-            
+
             if [ "$IP_A" = "$IP_B" ]; then
               echo "Services received the same IP: $IP_A"
               exit 1
@@ -315,18 +331,19 @@
           when: multi_ready is succeeded
 
         - name: Display multiple service test results
-          debug:
+          ansible.builtin.debug:
             msg: |
-              Service allocation: 
+              Service allocation:
               {{ multi_ips.stdout_lines }}
               Unique IPs: {{ "Yes, services received different IPs" if unique_ips.rc == 0 else "No, services did not receive unique IPs" }}
           when: multi_ready is succeeded
 
         - name: Cleanup multi-test resources
-          shell: |
+          ansible.builtin.shell: |
+            set -o pipefail
             export KUBECONFIG=/etc/kubernetes/admin.conf
             kubectl delete namespace metallb-multi-test
           register: multi_cleanup
           changed_when: false
           ignore_errors: true
-          become: true 
+          become: true
