@@ -156,7 +156,7 @@
       
     - name: Create Jenkins agent systemd service
       template:
-        src: ../../roles/jenkins_podman/templates/jenkins-agent.service.j2
+        src: ../../../roles/jenkins_podman/templates/jenkins-agent.service.j2
         dest: /etc/systemd/system/jenkins-agent.service
         owner: root
         group: root

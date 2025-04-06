@@ -5,7 +5,7 @@
   gather_facts: yes
   tasks:
     - name: Include test tasks
-      include_tasks: ../ansible/roles/kubernetes_master/tasks/test-cluster.yml
+      include_tasks: ../../../roles/kubernetes_master/tasks/test-cluster.yml
 
     - name: Test Calico network policy
       block:
